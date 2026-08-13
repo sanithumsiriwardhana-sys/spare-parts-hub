@@ -1,0 +1,9 @@
+spring.application.name=spare-parts-hub
+
+spring.datasource.url=jdbc:mysql://localhost:3306/spare_parts_db
+spring.datasource.username=root
+spring.datasource.password=your_mysql_password_here
+
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
