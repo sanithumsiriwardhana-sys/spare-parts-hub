@@ -7,13 +7,13 @@ A web-based Computer Spare Parts Management System built to digitize inventory t
 
 ## Team
 
-| Name | Registration No. |
-|---|---|
-| Siriwardhana P.K.S.M. | IT25101412 |
-| Dilshan S.D.T.I. | IT25102210 |
-| Thaneshh U. | IT25103161 |
-| Nuwandhi N.A.C. | IT25100446 |
-| Rathnataka R.M.P.S. | IT25102567 |
+| Name                   | Registration No. |
+|------------------------|---|
+| Siriwardhana P.K.S.M.  | IT25101412 |
+| Dilshan S.D.T.I.       | IT25102210 |
+| Thaneshh U.            | IT25103161 |
+| Nuwandhi N.A.C.        | IT25100446 |
+| Rathnayaka R.M.P.S.    | IT25102567 |
 | Aththanayaka A.B.C.S.R. | IT25100034 |
 
 ## Tech Stack
