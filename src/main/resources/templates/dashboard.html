@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: page(title='Dashboard', content=~{::main})}">
+<body>
+<main>
+    <h2>Welcome, <span sec:authentication="name"></span></h2>
+    <p class="text-muted">
+        Signed in as <span sec:authentication="principal.user.role"></span>.
+        This is a placeholder landing page - each function module can add
+        its own dashboard widget/card here once built.
+    </p>
+</main>
+</body>
+</html>
