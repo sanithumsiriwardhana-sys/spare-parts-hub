@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+  Shared page layout. Every page in the app should extend this fragment
+  instead of writing its own <html><head><nav> boilerplate, e.g.:
+
+    <html xmlns:th="http://www.thymeleaf.org"
+          th:replace="~{fragments/layout :: page(title='Product Search', content=~{::main})}">
+    <body>
+    <main>
+      ... your page content here ...
+    </main>
+    </body>
+    </html>
+
+  This is native Thymeleaf 3 parameterized-fragment syntax - no extra
+  dependency needed beyond spring-boot-starter-thymeleaf.
+-->
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="page(title, content)">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title th:text="${title} + ' - Spare Parts Hub'">Spare Parts Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
+    <a class="navbar-brand" th:href="@{/dashboard}">Spare Parts Hub</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav me-auto">
+            <li class="nav-item" sec:authorize="hasAnyRole('WAREHOUSE_CLERK','SALES_EXEC','ADMIN')">
+                <a class="nav-link" th:href="@{/inventory}">Inventory</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasAnyRole('SALES_EXEC','ADMIN')">
+                <a class="nav-link" th:href="@{/sales}">Sales / POS</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasAnyRole('INVENTORY_SUPERVISOR','ADMIN')">
+                <a class="nav-link" th:href="@{/stockmonitoring}">Urgency Dashboard</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasAnyRole('OPERATIONS_COORDINATOR','ADMIN')">
+                <a class="nav-link" th:href="@{/warranty}">Warranty / RMA</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+                <a class="nav-link" th:href="@{/supplier}">Suppliers</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+                <a class="nav-link" th:href="@{/reporting}">Reports</a>
+            </li>
+        </ul>
+        <span class="navbar-text text-light me-3" sec:authentication="name"></span>
+        <form th:action="@{/logout}" method="post" class="d-inline">
+            <button class="btn btn-outline-light btn-sm" type="submit">Logout</button>
+        </form>
+    </div>
+</nav>
+<main class="container-fluid mt-4" th:replace="${content}"></main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

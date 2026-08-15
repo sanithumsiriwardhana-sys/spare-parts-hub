@@ -38,7 +38,6 @@ public class SecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        // Spring Security 6.3+ removed the no-arg constructor + setUserDetailsService()
         // pattern - UserDetailsService is now passed directly into the constructor.
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
