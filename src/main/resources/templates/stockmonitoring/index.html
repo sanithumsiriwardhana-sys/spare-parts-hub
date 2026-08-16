@@ -4,13 +4,45 @@
 <body>
 <main>
     <h2>Dynamic Urgency Score Tracking</h2>
-    <p class="text-muted">Actor: Inventory Supervisor</p>
-    <ul>
-        <li>TODO: View urgency score dashboard</li>
-        <li>TODO: Receive critical stock alert</li>
-        <li>TODO: Log customer stock request</li>
-        <li>TODO: Approve restock suggestion</li>
-    </ul>
+    <p class="text-muted">
+        Ranked by urgency score - stock level weighed against recent sales velocity,
+        not just a flat low-stock threshold.
+    </p>
+
+    <div th:if="${#lists.isEmpty(rows)}" class="alert alert-secondary">
+        No products found.
+    </div>
+
+    <table th:unless="${#lists.isEmpty(rows)}" class="table table-hover align-middle">
+        <thead>
+        <tr>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Stock</th>
+            <th>Urgency Score</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${rows}"
+            th:classappend="${row.level.name() == 'CRITICAL'} ? 'table-danger' : ''">
+            <td th:text="${row.product.name}">Product name</td>
+            <td th:text="${row.product.category}">Category</td>
+            <td th:text="${row.product.stockCount}">0</td>
+            <td th:text="${row.product.urgencyScore}">0.00</td>
+            <td>
+                <span class="badge"
+                      th:classappend="${row.level.name() == 'CRITICAL'} ? 'bg-danger' : (${row.level.name() == 'WARNING'} ? 'bg-warning text-dark' : 'bg-success')"
+                      th:text="${row.level}">SAFE</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p class="text-muted small">
+        Scores are calculated by a scheduled/manual recalculation job (not wired up yet) -
+        values shown reflect whatever is currently stored in product.urgency_score.
+    </p>
 </main>
 </body>
 </html>
