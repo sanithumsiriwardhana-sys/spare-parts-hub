@@ -47,6 +47,8 @@ src/main/resources/templates/
 | 5. Supplier Management | `supplier` | Shop Owner / Admin | PBI-17, PBI-18 | Sprint 3 |
 | 6. Reporting, Audit Log & Supplier Portal | `reporting` | Admin (internal) + Supplier (external) | PBI-19, PBI-21 to PBI-24 | Sprint 4 |
 
+`stockmonitoring` also owns `RestockSuggestion` (approve/modify/reject decisions on restock recommendations) — this was missing from the original schema and got added after cross-checking against `Use_Case_Scenarios.docx` (UC-03 postcondition 3).
+
 _Fill in each teammate's name against their function below once assigned:_
 
 - Inventory Storage Location Tracking — _name_
@@ -123,11 +125,61 @@ Before opening a PR into `main`, your module must:
 Keeping `main` always in a demoable state matters — we have weekly checkpoints and a
 Week 13 live demo, so nobody should be stuck untangling a broken `main` right before either.
 
-## Known open decisions
+## Supplier authentication
 
-- **Supplier authentication is separate from staff login.** `Supplier` is not in the
-  `users` table (see `schema.sql` — the `role` ENUM only has the 5 internal roles), and it's
-  intentionally excluded from the Staff actor generalization in our use case diagrams.
-  Whoever builds Function 6 needs to design a separate login path for the external supplier
-  portal — raise this with the team before starting, it's a real design decision, not just
-  an implementation detail.
+`Supplier` is a primary actor in UC-06 (Centralized Reporting, Audit Logging & Supplier
+Portal) with its own login — but it's not in the `users` table and never will be (the
+`role` ENUM only covers the 5 internal staff roles). Staff and suppliers are authenticated
+through **two completely separate systems**:
+
+| | Staff | Supplier |
+|---|---|---|
+| Entity | `User` | `Supplier` |
+| Repository | `UserRepository` | `SupplierRepository` (in `reporting`) |
+| `UserDetailsService` | `CustomUserDetailsService` | `SupplierUserDetailsService` (in `reporting.security`) |
+| `UserDetails` wrapper | `CustomUserPrincipal` | `CustomSupplierPrincipal` (in `reporting.security`) |
+| Security config | `SecurityConfig` (`@Order(2)`) | `SupplierSecurityConfig` (`@Order(1)`, in `reporting.security`) |
+| Login route | `/login` | `/supplier-portal/login` |
+| Layout | `fragments/layout.html` | its own standalone layout — do not try to reuse the staff navbar/layout for supplier pages |
+
+A supplier session cannot reach `/inventory`, `/sales`, etc., and a staff session cannot
+reach `/supplier-portal/**` — they're enforced by entirely separate `SecurityFilterChain`
+beans, not by role checks within one chain.
+
+**Shared-file dependency:** adding the second filter chain required one change to the
+shared `SecurityConfig.java` — an `@Order(2)` annotation on its `filterChain` bean, since
+Spring Security requires an explicit order once more than one `SecurityFilterChain` bean
+exists. This is the one exception to "don't touch shared files without flagging it" — it's
+already done, just be aware of it if you're debugging an auth issue and wondering why
+`SecurityConfig` looks different from before.
+
+Whoever builds out the rest of `reporting` owns the actual supplier-portal pages (sales
+velocity reports, restock offer submission, catalog upload, assigned PO status —
+UC-06 steps B2 through B5). The login/logout/dashboard shell is already there to build
+behind.
+
+## Schema and entities were cross-checked against Use_Case_Scenarios.docx
+
+The original `schema.sql` and entity set were checked against the team's use case
+scenarios document and had several gaps closed as a result — this was a full rewrite of
+`schema.sql`, not a migration, since it happened before anyone had pulled the original.
+If your local `schema.sql` predates this, drop and recreate `spare_parts_db` from the
+current file rather than trying to patch it by hand. Changes made:
+
+- `supplier` — added `password_hash` (see Supplier authentication above)
+- `pick_ticket` — status widened to `pending / completed / partially_completed / exception`
+  (was just `pending / fulfilled`); added `ticket_code`
+- `pick_ticket_item` — added `picked_quantity` (actual quantity picked, separate from
+  requested, for partial picks)
+- `purchase_order` — status widened to include `partially_received`
+- `serial_number` — added `po_item_id`, linking a received serial number back to the
+  purchase order it arrived on
+- `rma_claim` — added `fault_description` and `condition_notes`
+- `sale_item` — added `compatibility_override_reason`
+- **New table** `restock_suggestion` — stores the Inventory Supervisor's approve / modify /
+  reject decision on a restock recommendation, with an optional reason (owned by
+  `stockmonitoring`, see table above)
+
+If you generated entity classes or wrote queries against the old schema before this
+update, regenerate against the current `schema.sql` — column names for the tables above
+changed shape, not just gained columns.
