@@ -1,4 +1,3 @@
-
 CREATE DATABASE IF NOT EXISTS spare_parts_db;
 USE spare_parts_db;
 
@@ -19,12 +18,15 @@ CREATE TABLE storage_location(
     bin VARCHAR(30) NOT NULL
 );
 
+-- password_hash added: Supplier is a primary actor with its own portal
+-- login in UC-06, separate from staff auth (see SupplierSecurityConfig).
 CREATE TABLE supplier(
     supplier_id INT AUTO_INCREMENT PRIMARY KEY,
     supplier_code VARCHAR(20),
     name VARCHAR(50) NOT NULL,
     contact VARCHAR(20) NOT NULL,
-    email VARCHAR(254) UNIQUE NOT NULL
+    email VARCHAR(254) UNIQUE NOT NULL,
+    password_hash VARCHAR(60) NOT NULL
 );
 
 CREATE TABLE compatibility_rule(
@@ -67,7 +69,6 @@ CREATE TABLE product_spec(
     FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
 
-
 CREATE TABLE sale(
     sale_id INT AUTO_INCREMENT PRIMARY KEY,
     sale_code VARCHAR(20),
@@ -77,33 +78,42 @@ CREATE TABLE sale(
     FOREIGN KEY (sold_by) REFERENCES users(user_id)
 );
 
+-- compatibility_override_reason added: UC-02 step 6a requires recording
+-- why an authorized override was allowed when a conflict was detected.
 CREATE TABLE sale_item(
     sale_item_id INT AUTO_INCREMENT PRIMARY KEY,
     sale_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
     price_at_sale DECIMAL(10,2) NOT NULL,
+    compatibility_override_reason VARCHAR(255),
     FOREIGN KEY (sale_id) REFERENCES sale(sale_id),
     FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
 
-
+-- status widened + ticket_code added: UC-01 needs Completed / Partially
+-- Completed / Exception outcomes and a human-readable ticket number, not
+-- just a pending/fulfilled binary.
 CREATE TABLE pick_ticket(
     ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+    ticket_code VARCHAR(20),
     sale_id INT NOT NULL,
     fulfilled_by INT,
-    status ENUM('pending','fulfilled') NOT NULL DEFAULT 'pending',
+    status ENUM('pending','completed','partially_completed','exception') NOT NULL DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     fulfilled_at DATETIME,
     FOREIGN KEY (sale_id) REFERENCES sale(sale_id),
     FOREIGN KEY (fulfilled_by) REFERENCES users(user_id)
 );
 
+-- picked_quantity added: UC-01 step 7a requires recording the actual
+-- quantity picked, which may differ from what was requested.
 CREATE TABLE pick_ticket_item(
     pick_ticket_item_id INT AUTO_INCREMENT PRIMARY KEY,
     ticket_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
+    picked_quantity INT,
     FOREIGN KEY (ticket_id) REFERENCES pick_ticket(ticket_id),
     FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
@@ -122,30 +132,6 @@ CREATE TABLE stock_request(
     FOREIGN KEY (logged_by) REFERENCES users(user_id)
 );
 
-
-CREATE TABLE serial_number(
-    serial_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL,
-    sale_id INT,
-    serial_value VARCHAR(50) NOT NULL UNIQUE,
-    current_status ENUM('in_stock','sold','returned','defective') NOT NULL DEFAULT 'in_stock',
-    received_date DATE NOT NULL,
-    FOREIGN KEY (product_id) REFERENCES product(product_id),
-    FOREIGN KEY (sale_id) REFERENCES sale(sale_id)
-);
-
-CREATE TABLE rma_claim(
-    claim_id INT AUTO_INCREMENT PRIMARY KEY,
-    claim_code VARCHAR(20),
-    serial_id INT NOT NULL,
-    processed_by INT NOT NULL,
-    claim_date DATE NOT NULL DEFAULT (CURRENT_DATE),
-    resolution ENUM('sent_to_manufacturer','refunded','replaced','pending') NOT NULL DEFAULT 'pending',
-    FOREIGN KEY (serial_id) REFERENCES serial_number(serial_id),
-    FOREIGN KEY (processed_by) REFERENCES users(user_id)
-);
-
-
 CREATE TABLE supplier_product(
     supplier_product_id INT AUTO_INCREMENT PRIMARY KEY,
     supplier_id INT NOT NULL,
@@ -157,12 +143,14 @@ CREATE TABLE supplier_product(
     FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
 
+-- status widened: UC-05 step 11 requires "Partially Received" as a real,
+-- distinct state (a shipment can arrive short/incomplete).
 CREATE TABLE purchase_order(
     po_id INT AUTO_INCREMENT PRIMARY KEY,
     po_code VARCHAR(20),
     supplier_id INT NOT NULL,
     created_by INT NOT NULL,
-    status ENUM('pending','shipped','received') NOT NULL DEFAULT 'pending',
+    status ENUM('pending','shipped','partially_received','received') NOT NULL DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     received_at DATETIME,
     FOREIGN KEY (supplier_id) REFERENCES supplier(supplier_id),
@@ -179,6 +167,55 @@ CREATE TABLE purchase_order_item(
     FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
 
+-- po_item_id added: UC-05 step 10 requires tracing a received serial
+-- number back to the specific shipment/PO it arrived on. Moved below
+-- purchase_order_item (was originally defined earlier in the file) so
+-- this foreign key can be declared inline instead of via a later ALTER.
+CREATE TABLE serial_number(
+    serial_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    po_item_id INT,
+    sale_id INT,
+    serial_value VARCHAR(50) NOT NULL UNIQUE,
+    current_status ENUM('in_stock','sold','returned','defective') NOT NULL DEFAULT 'in_stock',
+    received_date DATE NOT NULL,
+    FOREIGN KEY (product_id) REFERENCES product(product_id),
+    FOREIGN KEY (po_item_id) REFERENCES purchase_order_item(po_item_id),
+    FOREIGN KEY (sale_id) REFERENCES sale(sale_id)
+);
+
+-- fault_description and condition_notes added: UC-04 step 5 requires
+-- recording the reported fault, physical condition, and supporting notes
+-- before a resolution is chosen.
+CREATE TABLE rma_claim(
+    claim_id INT AUTO_INCREMENT PRIMARY KEY,
+    claim_code VARCHAR(20),
+    serial_id INT NOT NULL,
+    processed_by INT NOT NULL,
+    fault_description VARCHAR(255),
+    condition_notes VARCHAR(255),
+    claim_date DATE NOT NULL DEFAULT (CURRENT_DATE),
+    resolution ENUM('sent_to_manufacturer','refunded','replaced','pending') NOT NULL DEFAULT 'pending',
+    FOREIGN KEY (serial_id) REFERENCES serial_number(serial_id),
+    FOREIGN KEY (processed_by) REFERENCES users(user_id)
+);
+
+-- New table: UC-03 postcondition 3 requires the Inventory Supervisor's
+-- approve/modify/reject decision (with reason) to be stored, separate
+-- from the eventual purchase order Function 5 creates from approved
+-- items.
+CREATE TABLE restock_suggestion(
+    suggestion_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    suggested_quantity INT NOT NULL,
+    status ENUM('pending','approved','modified','rejected') NOT NULL DEFAULT 'pending',
+    reason VARCHAR(255),
+    reviewed_by INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at DATETIME,
+    FOREIGN KEY (product_id) REFERENCES product(product_id),
+    FOREIGN KEY (reviewed_by) REFERENCES users(user_id)
+);
 
 CREATE TABLE audit_log(
     log_id INT AUTO_INCREMENT PRIMARY KEY,

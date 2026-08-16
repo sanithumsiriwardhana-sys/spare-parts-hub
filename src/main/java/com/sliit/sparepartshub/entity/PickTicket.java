@@ -12,14 +12,20 @@ import java.time.LocalDateTime;
 @Table(name = "pick_ticket")
 public class PickTicket {
 
+    // Widened from (pending, fulfilled) to match UC-01's documented
+    // outcomes: a pick can finish Completed, Partially Completed, or
+    // hit an Exception (damaged/missing item), not just a binary done/not.
     public enum Status {
-        pending, fulfilled
+        pending, completed, partially_completed, exception
     }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ticket_id")
     private Integer ticketId;
+
+    @Column(name = "ticket_code", length = 20)
+    private String ticketCode;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sale_id", nullable = false)
@@ -49,6 +55,14 @@ public class PickTicket {
 
     public void setTicketId(Integer ticketId) {
         this.ticketId = ticketId;
+    }
+
+    public String getTicketCode() {
+        return ticketCode;
+    }
+
+    public void setTicketCode(String ticketCode) {
+        this.ticketCode = ticketCode;
     }
 
     public Sale getSale() {

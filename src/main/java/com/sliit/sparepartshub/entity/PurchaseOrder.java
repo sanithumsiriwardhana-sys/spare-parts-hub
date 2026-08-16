@@ -8,8 +8,10 @@ import java.time.LocalDateTime;
 @Table(name = "purchase_order")
 public class PurchaseOrder {
 
+    // Widened to include partially_received - UC-05 step 11 requires this
+    // as a real, distinct state (a shipment can arrive short/incomplete).
     public enum Status {
-        pending, shipped, received
+        pending, shipped, partially_received, received
     }
 
     @Id

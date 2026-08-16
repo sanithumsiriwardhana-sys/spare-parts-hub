@@ -29,6 +29,12 @@ public class SaleItem {
     @Column(name = "price_at_sale", nullable = false, precision = 10, scale = 2)
     private BigDecimal priceAtSale;
 
+    // UC-02 step 6a: if a compatibility conflict is overridden by an
+    // authorized Sales Executive, the reason must be recorded. Null when
+    // no conflict occurred.
+    @Column(name = "compatibility_override_reason", length = 255)
+    private String compatibilityOverrideReason;
+
     public SaleItem() {
     }
 
@@ -70,5 +76,13 @@ public class SaleItem {
 
     public void setPriceAtSale(BigDecimal priceAtSale) {
         this.priceAtSale = priceAtSale;
+    }
+
+    public String getCompatibilityOverrideReason() {
+        return compatibilityOverrideReason;
+    }
+
+    public void setCompatibilityOverrideReason(String compatibilityOverrideReason) {
+        this.compatibilityOverrideReason = compatibilityOverrideReason;
     }
 }

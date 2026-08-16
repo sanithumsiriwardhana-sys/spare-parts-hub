@@ -22,6 +22,12 @@ public class PickTicketItem {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    // Actual quantity picked, which may differ from the requested
+    // quantity for partial picks or damaged items (UC-01 step 7a).
+    // Null until the Warehouse Clerk confirms the pick.
+    @Column(name = "picked_quantity")
+    private Integer pickedQuantity;
+
     public PickTicketItem() {
     }
 
@@ -55,5 +61,13 @@ public class PickTicketItem {
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
+    }
+
+    public Integer getPickedQuantity() {
+        return pickedQuantity;
+    }
+
+    public void setPickedQuantity(Integer pickedQuantity) {
+        this.pickedQuantity = pickedQuantity;
     }
 }

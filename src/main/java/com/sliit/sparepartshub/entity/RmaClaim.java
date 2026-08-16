@@ -28,6 +28,14 @@ public class RmaClaim {
     @JoinColumn(name = "processed_by", nullable = false)
     private User processedBy;
 
+    // UC-04 step 5: coordinator records the reported fault and the
+    // item's physical condition before choosing a resolution.
+    @Column(name = "fault_description", length = 255)
+    private String faultDescription;
+
+    @Column(name = "condition_notes", length = 255)
+    private String conditionNotes;
+
     // NOT insertable=false here: schema defaults to CURRENT_DATE but the
     // app will typically want to set this explicitly at claim creation time.
     @Column(name = "claim_date", nullable = false)
@@ -70,6 +78,22 @@ public class RmaClaim {
 
     public void setProcessedBy(User processedBy) {
         this.processedBy = processedBy;
+    }
+
+    public String getFaultDescription() {
+        return faultDescription;
+    }
+
+    public void setFaultDescription(String faultDescription) {
+        this.faultDescription = faultDescription;
+    }
+
+    public String getConditionNotes() {
+        return conditionNotes;
+    }
+
+    public void setConditionNotes(String conditionNotes) {
+        this.conditionNotes = conditionNotes;
     }
 
     public LocalDate getClaimDate() {

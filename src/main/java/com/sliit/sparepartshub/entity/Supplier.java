@@ -23,6 +23,11 @@ public class Supplier {
     @Column(name = "email", nullable = false, unique = true, length = 254)
     private String email;
 
+    // Added for supplier portal login (UC-06). Suppliers authenticate
+    // separately from staff - see SupplierSecurityConfig.
+    @Column(name = "password_hash", nullable = false, length = 60)
+    private String passwordHash;
+
     public Supplier() {
     }
 
@@ -64,5 +69,13 @@ public class Supplier {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }

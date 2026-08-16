@@ -26,6 +26,13 @@ public class SerialNumber {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    // Nullable: only set for units received against a tracked purchase
+    // order (UC-05 step 10 - "records delivered quantities, component
+    // serial numbers"). Older/manually-entered stock may not have one.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "po_item_id")
+    private PurchaseOrderItem purchaseOrderItem;
+
     // Nullable: unset until the unit is actually sold.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sale_id")
@@ -58,6 +65,14 @@ public class SerialNumber {
 
     public void setProduct(Product product) {
         this.product = product;
+    }
+
+    public PurchaseOrderItem getPurchaseOrderItem() {
+        return purchaseOrderItem;
+    }
+
+    public void setPurchaseOrderItem(PurchaseOrderItem purchaseOrderItem) {
+        this.purchaseOrderItem = purchaseOrderItem;
     }
 
     public Sale getSale() {
