@@ -2,6 +2,7 @@ package com.sliit.sparepartshub.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -38,13 +39,20 @@ public class SecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
+        // Spring Security 6.3+ removed the no-arg constructor + setUserDetailsService()
         // pattern - UserDetailsService is now passed directly into the constructor.
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
 
+    // @Order(2): SupplierSecurityConfig's chain is @Order(1) and scoped
+    // to /supplier-portal/**, so it's checked first. This chain (implicit
+    // "/**" matcher) handles everything else - Spring Security requires
+    // an explicit order whenever more than one SecurityFilterChain bean
+    // exists, or startup fails with an ambiguous-bean error.
     @Bean
+    @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
