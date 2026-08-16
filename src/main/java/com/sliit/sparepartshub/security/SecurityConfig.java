@@ -54,27 +54,29 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login", "/css/**", "/js/**", "/webjars/**").permitAll()
-                .requestMatchers("/inventory/**").hasAnyRole("WAREHOUSE_CLERK", "SALES_EXEC", "ADMIN")
-                .requestMatchers("/sales/**").hasAnyRole("SALES_EXEC", "ADMIN")
-                .requestMatchers("/stockmonitoring/**").hasAnyRole("INVENTORY_SUPERVISOR", "ADMIN")
-                .requestMatchers("/warranty/**").hasAnyRole("OPERATIONS_COORDINATOR", "ADMIN")
-                .requestMatchers("/supplier/**", "/reporting/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
-                .loginPage("/login")
-                .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/dashboard", true)
-                .permitAll()
-            )
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login?logout")
-                .permitAll()
-            );
+                .authenticationProvider(authenticationProvider())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/login", "/css/**", "/js/**", "/webjars/**").permitAll()
+                        .requestMatchers("/inventory/**").hasAnyRole("WAREHOUSE_CLERK", "SALES_EXEC", "ADMIN")
+                        .requestMatchers("/sales/**").hasAnyRole("SALES_EXEC", "ADMIN")
+                        .requestMatchers("/stockmonitoring/**").hasAnyRole("INVENTORY_SUPERVISOR", "ADMIN")
+                        .requestMatchers("/warranty/**").hasAnyRole("OPERATIONS_COORDINATOR", "ADMIN")
+                        .requestMatchers("/supplier/**", "/reporting/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .loginProcessingUrl("/login")
+                        .defaultSuccessUrl("/dashboard", true)
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout")
+                        .permitAll()
+                );
         return http.build();
     }
 }
