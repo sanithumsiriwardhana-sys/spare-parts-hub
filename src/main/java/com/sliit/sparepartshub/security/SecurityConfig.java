@@ -54,13 +54,19 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login", "/css/**", "/js/**", "/webjars/**").permitAll()
                         .requestMatchers("/inventory/**").hasAnyRole("WAREHOUSE_CLERK", "SALES_EXEC", "ADMIN")
                         .requestMatchers("/sales/**").hasAnyRole("SALES_EXEC", "ADMIN")
+                        // More specific than /stockmonitoring/** below, so it must
+                        // come first - Spring Security uses the first matching
+                        // rule, not the most specific one. Sales Executive is the
+                        // one actually talking to customers about out-of-stock
+                        // items, even though the rest of this module (the urgency
+                        // dashboard itself) is Supervisor/Admin only.
+                        .requestMatchers("/stockmonitoring/stock-requests/**").hasAnyRole("SALES_EXEC", "INVENTORY_SUPERVISOR", "ADMIN")
                         .requestMatchers("/stockmonitoring/**").hasAnyRole("INVENTORY_SUPERVISOR", "ADMIN")
                         .requestMatchers("/warranty/**").hasAnyRole("OPERATIONS_COORDINATOR", "ADMIN")
                         .requestMatchers("/supplier/**", "/reporting/**").hasRole("ADMIN")

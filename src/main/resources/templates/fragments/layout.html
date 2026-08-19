@@ -42,6 +42,9 @@
             <li class="nav-item" sec:authorize="hasAnyRole('INVENTORY_SUPERVISOR','ADMIN')">
                 <a class="nav-link" th:href="@{/stockmonitoring}">Urgency Dashboard</a>
             </li>
+            <li class="nav-item" sec:authorize="hasAnyRole('SALES_EXEC','INVENTORY_SUPERVISOR','ADMIN')">
+                <a class="nav-link" th:href="@{/stockmonitoring/stock-requests}">Stock Requests</a>
+            </li>
             <li class="nav-item" sec:authorize="hasAnyRole('OPERATIONS_COORDINATOR','ADMIN')">
                 <a class="nav-link" th:href="@{/warranty}">Warranty / RMA</a>
             </li>
