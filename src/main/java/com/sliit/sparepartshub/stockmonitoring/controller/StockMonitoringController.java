@@ -2,6 +2,7 @@ package com.sliit.sparepartshub.stockmonitoring.controller;
 
 import com.sliit.sparepartshub.entity.Product;
 import com.sliit.sparepartshub.stockmonitoring.dto.ProductUrgencyView;
+import com.sliit.sparepartshub.stockmonitoring.dto.UrgencyLevel;
 import com.sliit.sparepartshub.stockmonitoring.service.UrgencyScoreService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -33,7 +34,14 @@ public class StockMonitoringController {
                 .map(p -> new ProductUrgencyView(p, urgencyScoreService.classify(p.getUrgencyScore())))
                 .toList();
 
+        // Reuses the same classify() call already done above - just a
+        // filtered view, not a separate calculation (SP2-05).
+        List<ProductUrgencyView> criticalItems = rows.stream()
+                .filter(row -> row.getLevel() == UrgencyLevel.CRITICAL)
+                .toList();
+
         model.addAttribute("rows", rows);
+        model.addAttribute("criticalItems", criticalItems);
         return "stockmonitoring/index";
     }
 }

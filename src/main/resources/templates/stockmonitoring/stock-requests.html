@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Stock Requests', content=~{::main})}">
+<body>
+<main>
+    <h2>Customer Stock Requests</h2>
+    <p class="text-muted">
+        Log a customer's interest in an out-of-stock item so they can be notified when it arrives.
+    </p>
+
+    <div class="card mb-4" style="max-width: 500px;">
+        <div class="card-body">
+            <h5 class="card-title">Log a new request</h5>
+            <form th:action="@{/stockmonitoring/stock-requests}" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Product</label>
+                    <select name="productId" class="form-select" required>
+                        <option th:each="product : ${products}"
+                                th:value="${product.productId}"
+                                th:text="${product.name} + ' (' + ${product.stockCount} + ' in stock)'">
+                            Product name
+                        </option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Customer name</label>
+                    <input type="text" name="customerName" class="form-control" required/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Customer email (optional)</label>
+                    <input type="email" name="customerEmail" class="form-control"/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Customer phone (optional)</label>
+                    <input type="text" name="customerPhonenum" class="form-control"/>
+                </div>
+                <button type="submit" class="btn btn-primary">Log request</button>
+            </form>
+        </div>
+    </div>
+
+    <h5>Pending requests</h5>
+    <div th:if="${#lists.isEmpty(pendingRequests)}" class="alert alert-secondary">
+        No pending stock requests.
+    </div>
+    <table th:unless="${#lists.isEmpty(pendingRequests)}" class="table table-hover align-middle">
+        <thead>
+        <tr>
+            <th>Product</th>
+            <th>Customer</th>
+            <th>Contact</th>
+            <th>Requested</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="req : ${pendingRequests}">
+            <td th:text="${req.product.name}">Product</td>
+            <td th:text="${req.customerName}">Customer</td>
+            <td th:text="${req.customerEmail} + ' ' + ${req.customerPhonenum}">Contact</td>
+            <td th:text="${req.requestedAt}">Date</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

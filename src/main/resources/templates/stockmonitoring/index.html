@@ -8,9 +8,22 @@
         Ranked by urgency score - stock level weighed against recent sales velocity,
         not just a flat low-stock threshold.
     </p>
+    <a th:href="@{/stockmonitoring/stock-requests}" class="btn btn-outline-secondary btn-sm mb-3">
+        Log a customer stock request
+    </a>
 
     <div th:if="${#lists.isEmpty(rows)}" class="alert alert-secondary">
         No products found.
+    </div>
+
+    <div th:unless="${#lists.isEmpty(criticalItems)}" class="alert alert-danger">
+        <strong th:text="${#lists.size(criticalItems)} + ' item(s) at CRITICAL urgency'">0 item(s) at CRITICAL urgency</strong>
+        <ul class="mb-0 mt-2">
+            <li th:each="item : ${criticalItems}"
+                th:text="${item.product.name} + ' — ' + ${item.product.stockCount} + ' left, score ' + ${item.product.urgencyScore}">
+                Product name — 0 left, score 0.00
+            </li>
+        </ul>
     </div>
 
     <table th:unless="${#lists.isEmpty(rows)}" class="table table-hover align-middle">
