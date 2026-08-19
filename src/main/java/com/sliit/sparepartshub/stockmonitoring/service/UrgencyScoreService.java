@@ -33,8 +33,14 @@ import java.util.stream.Collectors;
 public class UrgencyScoreService {
 
     private static final int LOOKBACK_DAYS = 30;
-    private static final BigDecimal CRITICAL_THRESHOLD = new BigDecimal("50");
-    private static final BigDecimal WARNING_THRESHOLD = new BigDecimal("20");
+    // Recalibrated from the original placeholders (50/20) after checking
+    // them against realistic seed data - a genuinely fast-moving item
+    // with low stock (e.g. 28 units sold in 30 days, 8 left) scored only
+    // ~10 under the old thresholds, never reaching CRITICAL. These values
+    // actually produce a spread across all three tiers for our seed data;
+    // recalibrate again once real sales history exists.
+    private static final BigDecimal CRITICAL_THRESHOLD = new BigDecimal("12");
+    private static final BigDecimal WARNING_THRESHOLD = new BigDecimal("5");
 
     private final ProductRepository productRepository;
     private final SaleItemRepository saleItemRepository;
@@ -96,3 +102,4 @@ public class UrgencyScoreService {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 }
+
