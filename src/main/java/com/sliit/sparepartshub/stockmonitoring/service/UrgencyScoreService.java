@@ -1,9 +1,11 @@
 package com.sliit.sparepartshub.stockmonitoring.service;
 
 import com.sliit.sparepartshub.entity.Product;
+import com.sliit.sparepartshub.entity.RestockSuggestion;
 import com.sliit.sparepartshub.stockmonitoring.dto.SalesVelocity;
 import com.sliit.sparepartshub.stockmonitoring.dto.UrgencyLevel;
 import com.sliit.sparepartshub.stockmonitoring.repository.ProductRepository;
+import com.sliit.sparepartshub.stockmonitoring.repository.RestockSuggestionRepository;
 import com.sliit.sparepartshub.stockmonitoring.repository.SaleItemRepository;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -21,9 +24,7 @@ import java.util.stream.Collectors;
  * slow-selling item sitting at the same stock count - matching the
  * proposal's graphics-card-vs-adapter example.
  *
- * Formula (tune LOOKBACK_DAYS / thresholds with the team once you have
- * real sales data to calibrate against):
- *
+ * Formula:
  *   velocityPerDay = unitsSoldInWindow / LOOKBACK_DAYS
  *   urgencyScore   = (velocityPerDay / (stockCount + 1)) * 100
  *
@@ -35,26 +36,35 @@ public class UrgencyScoreService {
     private static final int LOOKBACK_DAYS = 30;
     // Recalibrated from the original placeholders (50/20) after checking
     // them against realistic seed data - a genuinely fast-moving item
-    // with low stock (e.g. 28 units sold in 30 days, 8 left) scored only
-    // ~10 under the old thresholds, never reaching CRITICAL. These values
-    // actually produce a spread across all three tiers for our seed data;
-    // recalibrate again once real sales history exists.
+    // with low stock scored only ~10 under the old thresholds. These
+    // values produce a real spread across all three tiers for our seed
+    // data; recalibrate again once real sales history exists.
     private static final BigDecimal CRITICAL_THRESHOLD = new BigDecimal("12");
     private static final BigDecimal WARNING_THRESHOLD = new BigDecimal("5");
 
+    // How many days of expected demand a restock suggestion should cover,
+    // and the floor so a suggestion is never for a trivially small amount.
+    private static final int REORDER_COVERAGE_DAYS = 14;
+    private static final int MIN_SUGGESTED_QUANTITY = 5;
+
     private final ProductRepository productRepository;
     private final SaleItemRepository saleItemRepository;
+    private final RestockSuggestionRepository restockSuggestionRepository;
 
-    public UrgencyScoreService(ProductRepository productRepository, SaleItemRepository saleItemRepository) {
+    public UrgencyScoreService(ProductRepository productRepository,
+                               SaleItemRepository saleItemRepository,
+                               RestockSuggestionRepository restockSuggestionRepository) {
         this.productRepository = productRepository;
         this.saleItemRepository = saleItemRepository;
+        this.restockSuggestionRepository = restockSuggestionRepository;
     }
 
     /**
      * Recalculates and persists urgency_score for every product based on
-     * sales over the last LOOKBACK_DAYS. Call this on a schedule (e.g.
-     * nightly via @Scheduled) or trigger it manually from the dashboard -
-     * wiring that trigger is a separate step once the controller exists.
+     * sales over the last LOOKBACK_DAYS, and raises a new RestockSuggestion
+     * for any product that just became CRITICAL and doesn't already have
+     * one pending (UC-03 postcondition 3). Call this on a schedule (see
+     * UrgencyScoreScheduler) or trigger it manually.
      */
     public void recalculateAll() {
         LocalDateTime since = LocalDateTime.now().minusDays(LOOKBACK_DAYS);
@@ -62,10 +72,30 @@ public class UrgencyScoreService {
         Map<Integer, Long> unitsSoldByProduct = saleItemRepository.sumQuantitySoldSince(since).stream()
                 .collect(Collectors.toMap(SalesVelocity::getProductId, SalesVelocity::getUnitsSold));
 
+        // Products that already got a suggestion within the reorder
+        // coverage window shouldn't get a second one every time this
+        // runs (e.g. daily/scheduled) - even after approval, the actual
+        // stock hasn't arrived yet, so the product stays CRITICAL and
+        // would otherwise get re-flagged immediately. Checking ANY
+        // recent status (not just pending) is what fixes that - see the
+        // comment on findByCreatedAtAfter.
+        LocalDateTime suppressSince = LocalDateTime.now().minusDays(REORDER_COVERAGE_DAYS);
+        Set<Integer> productsWithRecentSuggestion = restockSuggestionRepository
+                .findByCreatedAtAfter(suppressSince).stream()
+                .map(s -> s.getProduct().getProductId())
+                .collect(Collectors.toSet());
+
         List<Product> products = productRepository.findAll();
         for (Product product : products) {
             long unitsSold = unitsSoldByProduct.getOrDefault(product.getProductId(), 0L);
-            product.setUrgencyScore(calculateScore(unitsSold, product.getStockCount()));
+            BigDecimal score = calculateScore(unitsSold, product.getStockCount());
+            product.setUrgencyScore(score);
+
+            boolean isCritical = classify(score) == UrgencyLevel.CRITICAL;
+            boolean alreadySuggestedRecently = productsWithRecentSuggestion.contains(product.getProductId());
+            if (isCritical && !alreadySuggestedRecently) {
+                raiseRestockSuggestion(product, unitsSold);
+            }
         }
         productRepository.saveAll(products);
     }
@@ -101,5 +131,16 @@ public class UrgencyScoreService {
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP);
     }
-}
 
+    private void raiseRestockSuggestion(Product product, long unitsSoldInWindow) {
+        double velocityPerDay = unitsSoldInWindow / (double) LOOKBACK_DAYS;
+        int suggestedQuantity = (int) Math.ceil(velocityPerDay * REORDER_COVERAGE_DAYS);
+        suggestedQuantity = Math.max(suggestedQuantity, MIN_SUGGESTED_QUANTITY);
+
+        RestockSuggestion suggestion = new RestockSuggestion();
+        suggestion.setProduct(product);
+        suggestion.setSuggestedQuantity(suggestedQuantity);
+        suggestion.setStatus(RestockSuggestion.Status.pending);
+        restockSuggestionRepository.save(suggestion);
+    }
+}

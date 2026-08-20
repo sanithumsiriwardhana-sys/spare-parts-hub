@@ -11,6 +11,9 @@
     <a th:href="@{/stockmonitoring/stock-requests}" class="btn btn-outline-secondary btn-sm mb-3">
         Log a customer stock request
     </a>
+    <a th:href="@{/stockmonitoring/restock-suggestions}" class="btn btn-outline-secondary btn-sm mb-3">
+        Review restock suggestions
+    </a>
 
     <div th:if="${#lists.isEmpty(rows)}" class="alert alert-secondary">
         No products found.

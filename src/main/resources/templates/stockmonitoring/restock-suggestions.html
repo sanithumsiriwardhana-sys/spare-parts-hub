@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Restock Suggestions', content=~{::main})}">
+<body>
+<main>
+    <h2>Restock Suggestion Approvals</h2>
+    <p class="text-muted">
+        Automatically raised when a product's urgency score reaches CRITICAL.
+    </p>
+
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <div th:if="${#lists.isEmpty(pending)}" class="alert alert-secondary">
+        No pending restock suggestions.
+    </div>
+
+    <div th:each="s : ${pending}" class="card mb-3" style="max-width: 700px;">
+        <div class="card-body">
+            <h5 class="card-title" th:text="${s.product.name}">Product name</h5>
+            <p class="card-text text-muted">
+                Current stock: <span th:text="${s.product.stockCount}">0</span> —
+                Score: <span th:text="${s.product.urgencyScore}">0.00</span> —
+                Suggested reorder quantity: <span th:text="${s.suggestedQuantity}">0</span>
+            </p>
+
+            <div class="d-flex flex-wrap gap-2">
+                <!-- Approve as-is -->
+                <form th:action="@{'/stockmonitoring/restock-suggestions/' + ${s.suggestionId} + '/approve'}" method="post">
+                    <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                </form>
+
+                <!-- Modify: edit quantity, then approve at the new amount -->
+                <form th:action="@{'/stockmonitoring/restock-suggestions/' + ${s.suggestionId} + '/modify'}"
+                      method="post" class="d-flex gap-1 align-items-center">
+                    <input type="number" name="quantity" th:value="${s.suggestedQuantity}"
+                           class="form-control form-control-sm" style="width: 90px;" min="1" required/>
+                    <input type="text" name="reason" placeholder="Reason for change (optional)"
+                           class="form-control form-control-sm" style="width: 220px;"/>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">Modify &amp; Approve</button>
+                </form>
+
+                <!-- Reject: reason is mandatory, enforced server-side -->
+                <form th:action="@{'/stockmonitoring/restock-suggestions/' + ${s.suggestionId} + '/reject'}"
+                      method="post" class="d-flex gap-1 align-items-center">
+                    <input type="text" name="reason" placeholder="Reason for rejection (required)"
+                           class="form-control form-control-sm" style="width: 220px;" required/>
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Reject</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>
