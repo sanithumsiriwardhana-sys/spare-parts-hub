@@ -42,12 +42,14 @@ src/main/resources/templates/
 |---|---|---|---|---|
 | 1. Inventory Storage Location Tracking | `inventory` | Warehouse Clerk, Senior Sales Executive | PBI-01 to PBI-04 | Sprint 2 |
 | 2. Product Search & Automated Checkout | `sales` | Senior Sales Executive | PBI-05 to PBI-08 | Sprint 1 |
-| 3. Dynamic Urgency Score Tracking | `stockmonitoring` | Inventory Supervisor | PBI-09 to PBI-12 | Sprint 2/3 |
+| 3. Dynamic Urgency Score Tracking | `stockmonitoring` | Inventory Supervisor (+ Senior Sales Executive for stock request logging only) | PBI-09 to PBI-12 | Sprint 2/3 |
 | 4. Warranty and Returns Management | `warranty` | Operations Coordinator | PBI-13 to PBI-16 | Sprint 3 |
 | 5. Supplier Management | `supplier` | Shop Owner / Admin | PBI-17, PBI-18 | Sprint 3 |
 | 6. Reporting, Audit Log & Supplier Portal | `reporting` | Admin (internal) + Supplier (external) | PBI-19, PBI-21 to PBI-24 | Sprint 4 |
 
 `stockmonitoring` also owns `RestockSuggestion` (approve/modify/reject decisions on restock recommendations) — this was missing from the original schema and got added after cross-checking against `Use_Case_Scenarios.docx` (UC-03 postcondition 3).
+
+`stockmonitoring` is functionally complete against its backlog (PBI-09 to PBI-12): repositories, scheduled urgency recalculation, the dashboard with critical/warning alerts, the full customer stock request lifecycle (log → notify → fulfill), and the restock suggestion generate → approve/modify/reject flow. If you're starting your own module and want a working example of the full repository → service → controller → template split for one function, this is the one to look at.
 
 _Fill in each teammate's name against their function below once assigned:_
 
@@ -118,12 +120,50 @@ Before opening a PR into `main`, your module must:
 - [ ] Compile clean (`mvn clean compile`, zero errors)
 - [ ] Boot clean (`mvn spring-boot:run`, no Hibernate validation errors)
 - [ ] Be reachable end-to-end: log in as your role's test account, click your navbar link,
-      confirm the page renders
+  confirm the page renders
 - [ ] Not modify files outside your own package/templates folder, unless flagged and agreed
-      with the owner of that file
+  with the owner of that file
 
 Keeping `main` always in a demoable state matters — we have weekly checkpoints and a
 Week 13 live demo, so nobody should be stuck untangling a broken `main` right before either.
+
+## Two things that already caused real bugs — read before touching shared security/pages
+
+**Spring Security checks `requestMatchers` top-to-bottom and stops at the
+first match — not the most specific one.** If you need a narrower rule inside
+a broader URL prefix (e.g. one specific page under `/yourmodule/**` needing a
+different role set than the rest of that module), the narrower rule must be
+listed *above* the broader one in `SecurityConfig`, or it will silently never
+apply. This happened for real when Sales Executive needed access to
+`/stockmonitoring/stock-requests/**` while the rest of `/stockmonitoring/**`
+stayed Supervisor/Admin-only — look at that block in `SecurityConfig` for the
+pattern to copy.
+
+**A shared file becomes branch-only the moment it depends on your module's
+code.** `PageController.java` and `dashboard.html` are shared, but the
+version that includes Function 3's landing-page widgets imports
+`UrgencyScoreService` and friends — classes that only exist on
+`feature/urgency-tracking` until that branch merges to `main`. Pushing that
+version of a shared file to `main` early breaks the build for everyone else.
+Rule of thumb: before pushing a shared-file change to `main`, check whether
+you just added an import from your own function package — if so, it stays on
+your branch until your module is merged, same as any other function-specific
+code.
+
+## Shared landing page widgets (`/dashboard`)
+
+Every logged-in staff member sees the same `/dashboard` page. Each function
+contributes its own widget as a `sec:authorize`-gated block inside the shared
+`<div class="row">` in `dashboard.html` — see the Urgency/Warning/Restock
+Suggestions/Stock Requests cards for the pattern. When adding yours:
+
+- Add a new gated block, don't edit an existing one.
+- Inject your own service into `PageController`'s constructor, same as the
+  existing ones — but see the shared-file-branch-only rule above.
+- Flag it in the team chat before you start editing this file. Two people
+  editing it at the same time on different branches is a guaranteed merge
+  conflict on the same lines — usually resolved by keeping both sides' widget
+  blocks, since they're additive, not competing.
 
 ## Supplier authentication
 
