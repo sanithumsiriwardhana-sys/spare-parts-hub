@@ -42,7 +42,7 @@
         <tbody>
         <tr th:each="row : ${rows}"
             th:classappend="${row.level.name() == 'CRITICAL'} ? 'table-danger' : ''">
-            <td th:text="${row.product.name}">Product name</td>
+            <td><a th:href="@{'/stockmonitoring/products/' + ${row.product.productId}}" th:text="${row.product.name}">Product name</a></td>
             <td th:text="${row.product.category}">Category</td>
             <td th:text="${row.product.stockCount}">0</td>
             <td th:text="${row.product.urgencyScore}">0.00</td>

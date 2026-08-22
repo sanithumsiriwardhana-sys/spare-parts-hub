@@ -133,14 +133,28 @@ public class UrgencyScoreService {
     }
 
     private void raiseRestockSuggestion(Product product, long unitsSoldInWindow) {
-        double velocityPerDay = unitsSoldInWindow / (double) LOOKBACK_DAYS;
-        int suggestedQuantity = (int) Math.ceil(velocityPerDay * REORDER_COVERAGE_DAYS);
-        suggestedQuantity = Math.max(suggestedQuantity, MIN_SUGGESTED_QUANTITY);
+        int suggestedQuantity = calculateSuggestedRestockQuantity(unitsSoldInWindow);
 
         RestockSuggestion suggestion = new RestockSuggestion();
         suggestion.setProduct(product);
         suggestion.setSuggestedQuantity(suggestedQuantity);
         suggestion.setStatus(RestockSuggestion.Status.pending);
         restockSuggestionRepository.save(suggestion);
+    }
+
+    /**
+     * Same formula used when auto-raising a suggestion, exposed so the
+     * product detail page (UC-03 step 8) can show a live estimate for
+     * products that aren't CRITICAL yet and so have no persisted
+     * suggestion to display.
+     */
+    public int calculateSuggestedRestockQuantity(long unitsSoldInWindow) {
+        double velocityPerDay = unitsSoldInWindow / (double) LOOKBACK_DAYS;
+        int suggestedQuantity = (int) Math.ceil(velocityPerDay * REORDER_COVERAGE_DAYS);
+        return Math.max(suggestedQuantity, MIN_SUGGESTED_QUANTITY);
+    }
+
+    public int getLookbackDays() {
+        return LOOKBACK_DAYS;
     }
 }
