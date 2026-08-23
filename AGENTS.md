@@ -90,6 +90,28 @@ system, this applies again.
 Multiple `SecurityFilterChain` beans require explicit `@Order` on every one of
 them, most-specific-`securityMatcher` first.
 
+**Second gotcha, same family: within a single filter chain, `requestMatchers`
+rules are evaluated top-to-bottom and Spring Security stops at the FIRST
+match - not the most specific one.** If you add a narrower exception inside a
+broader URL prefix (e.g. `/stockmonitoring/stock-requests/**` needing a wider
+role set than the rest of `/stockmonitoring/**`), the narrower rule MUST be
+listed before the broader one, or it will silently never apply - the broader
+rule matches first and the request is decided there. This already happened
+once in `SecurityConfig` (see the comment above the
+`/stockmonitoring/stock-requests/**` matcher).
+
+**Third gotcha: a shared file becomes branch-only the moment it imports
+something from an unmerged function package.** `PageController.java` and
+`dashboard.html` are shared files in principle, but `PageController` now
+depends on `UrgencyScoreService`, `RestockSuggestionService`, and
+`StockRequestService` - all only present on `feature/urgency-tracking`, not
+`main`. Pushing this version of `PageController.java` to `main` breaks the
+build for everyone else, since those classes genuinely don't exist there.
+Before suggesting ANY shared-file edit be pushed to `main`, check whether it
+introduces a new import from a function-specific package - if so, it has to
+wait on that branch until the function is merged. This already happened once
+and had to be reverted.
+
 ## Shared tables
 
 `Product` is read/written by multiple function packages (`sales`, and
@@ -136,7 +158,33 @@ Commit messages: conventional-commit style (`feat(scope): ...`,
 `fix(scope): ...`, `docs: ...`, `chore: ...`), short title + body explaining
 *why*, not just what changed.
 
-## Code style
+## Shared landing page widgets
+
+`web/PageController.java` and `templates/dashboard.html` render one shared
+page every logged-in staff member sees at `/dashboard`. Each function
+contributes its own widget as a `sec:authorize`-gated block within the same
+`<div class="row">`, following the pattern already in `dashboard.html`
+(the Urgency/Warning/Restock Suggestions/Stock Requests cards, all gated to
+`INVENTORY_SUPERVISOR`/`ADMIN`). Rules for adding a new widget here:
+
+- Add your own gated `<div>` inside the existing row - don't edit or remove
+  another function's block.
+- If your widget needs data from your own service/repository, inject it into
+  `PageController`'s constructor the same way the existing ones are - but see
+  the shared-file-branch-only gotcha above: this file can only be pushed to
+  `main` once your function's branch (and therefore your service classes)
+  are merged there.
+- Two people editing this file on different branches at the same time is a
+  guaranteed merge conflict on the same lines. Flag it in the team channel
+  before starting, and resolve conflicts by keeping both sides' widget blocks
+  (they're additive, not competing) rather than picking one.
+
+`stockmonitoring` (repository/service/controller/template split, DTOs for
+query projections, scheduled recalculation, the approve/modify/reject
+pattern in `RestockSuggestionService`) is a complete, working example of the
+full stack for one function - use it as the reference implementation when
+building out another function's module rather than starting from a blank
+pattern each time.
 
 - Plain getters/setters on entities, no Lombok (matches the existing `User`
   entity, which was hand-written first and set the convention).
