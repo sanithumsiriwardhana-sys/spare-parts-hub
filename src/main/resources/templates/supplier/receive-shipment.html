@@ -6,17 +6,14 @@
     <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
     <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
 
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <header class="page-header">
         <div>
-            <div class="page-kicker">Stock Receipt</div>
-            <h1 class="page-title h2">Receive Supplier Shipment</h1>
-            <p class="page-subtitle mb-0">
-                Record accepted quantities, optional serial numbers and any discrepancy for
-                <strong th:text="${po.poCode}">PO-000001</strong>.
-            </p>
+            <div class="page-kicker">Receive Stock</div>
+            <h1 class="page-title">Receive Supplier Shipment</h1>
+            <p class="page-subtitle mb-0">Record accepted quantities, serial numbers and discrepancies for <strong th:text="${po.poCode}">PO-000001</strong>.</p>
         </div>
-        <a class="btn btn-outline-secondary no-print" th:href="@{/supplier/purchase-orders/{id}(id=${po.poId})}">← Back to Purchase Order</a>
-    </div>
+        <a class="btn btn-outline-primary header-action no-print" th:href="@{/supplier/purchase-orders/{id}(id=${po.poId})}">Back to Purchase Order</a>
+    </header>
 
     <th:block th:replace="~{supplier/_fragments :: subnav('orders')}"></th:block>
 
@@ -27,11 +24,7 @@
                     <div class="receipt-item-head d-flex flex-column flex-md-row justify-content-between gap-2">
                         <div>
                             <div class="fw-bold" th:text="${item.product.name}">Product</div>
-                            <div class="small text-muted">
-                                Ordered quantity: <strong th:text="${item.quantityOrdered}">10</strong>
-                                <span> · </span>
-                                Current stock: <strong th:text="${item.product.stockCount}">0</strong>
-                            </div>
+                            <div class="small text-muted">Ordered: <strong th:text="${item.quantityOrdered}">10</strong><span> · </span>Current stock: <strong th:text="${item.product.stockCount}">0</strong></div>
                         </div>
                         <span class="code-chip" th:text="${item.product.productCode != null ? item.product.productCode : 'Product #' + item.product.productId}">PRD-001</span>
                     </div>
@@ -44,29 +37,28 @@
                                     <label class="form-label" th:for="${'acceptedQuantity-' + item.poItemId}">Accepted Quantity <span class="text-danger">*</span></label>
                                     <input class="form-control" th:id="${'acceptedQuantity-' + item.poItemId}" name="acceptedQuantity"
                                            type="number" min="0" th:max="${item.quantityOrdered}" th:value="${item.quantityOrdered}" required/>
-                                    <div class="form-text">Enter only units physically accepted into inventory.</div>
+                                    <div class="form-text">Only units physically accepted into inventory.</div>
                                 </div>
                                 <div class="col-md-8">
                                     <label class="form-label" th:for="${'serialNumbers-' + item.poItemId}">Serial Numbers <span class="text-muted fw-normal">(optional)</span></label>
-                                    <textarea class="form-control" th:id="${'serialNumbers-' + item.poItemId}" name="serialNumbers" rows="3"
-                                              placeholder="One serial per line, or comma-separated"></textarea>
-                                    <div class="form-text">Serial count cannot exceed the accepted quantity. Duplicate serials are rejected.</div>
+                                    <textarea class="form-control" th:id="${'serialNumbers-' + item.poItemId}" name="serialNumbers" rows="3" placeholder="Enter one serial number per line"></textarea>
+                                    <div class="form-text">Serial count cannot exceed accepted quantity; duplicate serials are rejected.</div>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label" th:for="${'discrepancyNote-' + item.poItemId}">Discrepancy / Receipt Note</label>
+                                    <label class="form-label" th:for="${'discrepancyNote-' + item.poItemId}">Discrepancy Note</label>
                                     <textarea class="form-control" th:id="${'discrepancyNote-' + item.poItemId}" name="discrepancyNote" rows="3" maxlength="1000"
-                                              placeholder="e.g. 2 units damaged in transit; accepted 8 of 10"></textarea>
+                                              placeholder="Optional – damaged, missing or rejected units"></textarea>
                                 </div>
                             </div>
                             <div class="d-flex justify-content-end mt-3 no-print">
-                                <button class="btn btn-success" type="submit">Record Receipt & Update Stock</button>
+                                <button class="btn btn-success" type="submit">Receive Shipment</button>
                             </div>
                         </form>
                     </div>
                 </div>
 
                 <div class="empty-state panel-card" th:if="${#lists.isEmpty(items)}">
-                    <div class="empty-symbol">R</div>
+                    <div class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8l9-5 9 5-9 5-9-5Z"/><path d="M3 8v8l9 5 9-5V8"/></svg></div>
                     <h3 class="h6 text-dark">No order items found</h3>
                     <p class="mb-0">This purchase order has no item rows to receive.</p>
                 </div>
@@ -78,21 +70,11 @@
                 <div class="metric-label">Receipt Summary</div>
                 <h2 class="h5 fw-bold mt-2" th:text="${po.poCode}">PO-000001</h2>
                 <div class="small text-muted mb-3" th:text="${po.supplier.name}">Supplier</div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Current status</span>
-                    <span th:class="${'status-pill status-' + po.status}" th:text="${#strings.replace(po.status.toString(), '_', ' ')}">shipped</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Items</span>
-                    <strong th:text="${#lists.size(items)}">1</strong>
-                </div>
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">Status</span><span th:class="${'status-pill status-' + po.status}" th:text="${#strings.replace(po.status.toString(), '_', ' ')}">shipped</span></div>
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">Items</span><strong th:text="${#lists.size(items)}">1</strong></div>
                 <div class="soft-divider my-3"></div>
-                <div class="note-box">
-                    <strong>Important:</strong> accepted units are immediately added to <code>Product.stockCount</code>. Do not submit the same physical units twice.
-                </div>
-                <div class="small text-muted mt-3">
-                    A complete quantity marks the PO Received; a short receipt marks it Partially Received. Receipt details are written to the audit log.
-                </div>
+                <div class="note-box"><strong>Important:</strong> accepted units are immediately added to inventory. Do not submit the same physical units twice.</div>
+                <div class="small text-muted mt-3">A complete receipt marks the PO Received; a short receipt marks it Partially Received. Receipt details are audited.</div>
             </div>
         </div>
     </div>
