@@ -6,16 +6,16 @@
     <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
     <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
 
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <header class="page-header">
         <div>
             <div class="page-kicker">Supplier Directory</div>
-            <h1 class="page-title h2">Supplier Records</h1>
-            <p class="page-subtitle mb-0">Maintain approved supplier contact information used by purchasing and the supplier portal.</p>
+            <h1 class="page-title">Suppliers</h1>
+            <p class="page-subtitle mb-0">Maintain supplier contact details used by procurement without exposing portal credentials.</p>
         </div>
         <div class="search-box no-print">
             <input class="form-control" type="search" placeholder="Search suppliers..." data-table-search="supplierTable" aria-label="Search suppliers"/>
         </div>
-    </div>
+    </header>
 
     <th:block th:replace="~{supplier/_fragments :: subnav('suppliers')}"></th:block>
 
@@ -37,28 +37,24 @@
                         <div class="fw-bold" th:text="${supplier.name}">Supplier Name</div>
                         <div class="text-muted small" th:text="${'Supplier #' + supplier.supplierId}">Supplier #1</div>
                     </td>
-                    <td>
-                        <span class="code-chip" th:text="${supplier.supplierCode != null ? supplier.supplierCode : 'Not assigned'}">SUP-001</span>
-                    </td>
+                    <td><span class="code-chip" th:text="${supplier.supplierCode != null ? supplier.supplierCode : 'Not assigned'}">SUP-001</span></td>
                     <td th:text="${supplier.contact}">0771234567</td>
                     <td><a th:href="${'mailto:' + supplier.email}" th:text="${supplier.email}">supplier@example.com</a></td>
                     <td class="text-end no-print">
-                        <a class="btn btn-sm btn-outline-primary" th:href="@{/supplier/records/{id}/edit(id=${supplier.supplierId})}">Edit Record</a>
+                        <a class="btn btn-sm btn-outline-primary" th:href="@{/supplier/records/{id}/edit(id=${supplier.supplierId})}">Edit</a>
                     </td>
                 </tr>
                 </tbody>
             </table>
         </div>
         <div class="empty-state" th:if="${#lists.isEmpty(suppliers)}">
-            <div class="empty-symbol">S</div>
-            <h3 class="h6 text-dark">No supplier records yet</h3>
-            <p class="mb-0">Approved supplier accounts will appear here when they are available.</p>
+            <div class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+            <h3 class="h6 text-dark">No suppliers available</h3>
+            <p class="mb-0">Approved supplier accounts will appear here when available.</p>
         </div>
     </div>
 
-    <div class="note-box mt-3">
-        Supplier portal credentials are intentionally not displayed or edited from this screen. Supplier authentication remains separate from staff authentication.
-    </div>
+    <div class="info-box mt-3">Supplier portal credentials are intentionally not displayed or edited from Supplier Management.</div>
 
     <th:block th:replace="~{supplier/_fragments :: scripts}"></th:block>
 </main>
