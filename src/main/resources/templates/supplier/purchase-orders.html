@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Purchase Orders', content=~{::main})}">
+<body>
+<main class="supplier-page">
+    <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
+    <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <div class="page-kicker">Purchase Order Lifecycle</div>
+            <h1 class="page-title h2">Purchase Orders</h1>
+            <p class="page-subtitle mb-0">Review issued orders, confirm dispatch, export order data, and receive delivered stock.</p>
+        </div>
+        <div class="d-flex gap-2 no-print">
+            <div class="search-box">
+                <input class="form-control" type="search" placeholder="Search orders..." data-table-search="poTable" aria-label="Search purchase orders"/>
+            </div>
+            <a class="btn btn-primary text-nowrap" th:href="@{/supplier/restock-requirements}">New Purchase</a>
+        </div>
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: subnav('orders')}"></th:block>
+
+    <div class="panel-card p-0 overflow-hidden">
+        <div class="table-responsive" th:if="${!#lists.isEmpty(purchaseOrders)}">
+            <table class="table table-modern" id="poTable">
+                <thead>
+                <tr>
+                    <th>PO Code</th>
+                    <th>Supplier</th>
+                    <th>Created By</th>
+                    <th>Created</th>
+                    <th>Status</th>
+                    <th class="text-end no-print">Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="po : ${purchaseOrders}" data-search-row>
+                    <td><span class="code-chip" th:text="${po.poCode != null ? po.poCode : 'Draft'}">PO-000001</span></td>
+                    <td>
+                        <div class="fw-bold" th:text="${po.supplier.name}">Supplier</div>
+                        <div class="small text-muted" th:text="${po.supplier.email}">supplier@example.com</div>
+                    </td>
+                    <td th:text="${po.createdBy.name}">Admin</td>
+                    <td class="small text-muted" th:text="${po.createdAt != null ? po.createdAt : '—'}">—</td>
+                    <td><span th:class="${'status-pill status-' + po.status}" th:text="${#strings.replace(po.status.toString(), '_', ' ')}">pending</span></td>
+                    <td class="text-end no-print">
+                        <a class="btn btn-sm btn-outline-primary" th:href="@{/supplier/purchase-orders/{id}(id=${po.poId})}">Open PO</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="empty-state" th:if="${#lists.isEmpty(purchaseOrders)}">
+            <div class="empty-symbol">PO</div>
+            <h3 class="h6 text-dark">No purchase orders yet</h3>
+            <p class="mb-3">Start from an approved restock requirement and compare supplier terms.</p>
+            <a class="btn btn-primary no-print" th:href="@{/supplier/restock-requirements}">Open Restock Requirements</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-md-3"><div class="panel-card py-3"><span class="status-pill status-pending">Pending</span><div class="small text-muted mt-2">Issued and awaiting confirmed dispatch.</div></div></div>
+        <div class="col-md-3"><div class="panel-card py-3"><span class="status-pill status-shipped">Shipped</span><div class="small text-muted mt-2">Supplier dispatch has been confirmed.</div></div></div>
+        <div class="col-md-3"><div class="panel-card py-3"><span class="status-pill status-partially_received">Partially Received</span><div class="small text-muted mt-2">Only part of the order was accepted.</div></div></div>
+        <div class="col-md-3"><div class="panel-card py-3"><span class="status-pill status-received">Received</span><div class="small text-muted mt-2">Order receipt is complete and inventory was updated.</div></div></div>
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: scripts}"></th:block>
+</main>
+</body>
+</html>
