@@ -5,17 +5,14 @@
 <main class="supplier-page">
     <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
 
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <header class="page-header">
         <div>
             <div class="page-kicker">Supplier Comparison</div>
-            <h1 class="page-title h2">Choose the Best Supplier</h1>
-            <p class="page-subtitle mb-0">
-                Comparing terms for <strong th:text="${suggestion.product.name}">Product</strong>
-                using the requested quantity below.
-            </p>
+            <h1 class="page-title">Compare Suppliers</h1>
+            <p class="page-subtitle mb-0">Compare eligible supplier terms for <strong th:text="${suggestion.product.name}">Product</strong>.</p>
         </div>
-        <a class="btn btn-outline-secondary no-print" th:href="@{/supplier/restock-requirements}">← Back to Requirements</a>
-    </div>
+        <a class="btn btn-outline-primary header-action no-print" th:href="@{/supplier/restock-requirements}">Back to Requirements</a>
+    </header>
 
     <th:block th:replace="~{supplier/_fragments :: subnav('restock')}"></th:block>
 
@@ -28,9 +25,7 @@
                             <div class="metric-label">Restock Requirement</div>
                             <h2 class="h5 fw-bold mt-2 mb-1" th:text="${suggestion.product.name}">Product Name</h2>
                             <div class="text-muted small">
-                                <span th:text="${suggestion.product.brand}">Brand</span>
-                                <span> · </span>
-                                <span th:text="${suggestion.product.category}">Category</span>
+                                <span th:text="${suggestion.product.brand}">Brand</span><span> · </span><span th:text="${suggestion.product.category}">Category</span>
                                 <span th:if="${suggestion.product.productCode != null}"> · </span>
                                 <span th:if="${suggestion.product.productCode != null}" th:text="${suggestion.product.productCode}">Code</span>
                             </div>
@@ -41,7 +36,7 @@
                                 <label class="form-label" for="quantity">Required Quantity</label>
                                 <div class="input-group">
                                     <input class="form-control" id="quantity" name="quantity" type="number" min="1" th:value="${quantity}" required/>
-                                    <button class="btn btn-outline-primary" type="submit">Recalculate</button>
+                                    <button class="btn btn-outline-primary" type="submit">Update</button>
                                 </div>
                             </form>
                         </div>
@@ -50,11 +45,14 @@
             </div>
             <div class="col-lg-5">
                 <div class="recommend-card h-100">
-                    <div class="metric-label">Recommendation</div>
+                    <div class="metric-label">Recommended Option</div>
                     <div th:if="${!#lists.isEmpty(rows) and rows[0].recommended}" class="mt-2">
-                        <div class="h5 fw-bold mb-1" th:text="${rows[0].supplierName}">Recommended Supplier</div>
-                        <div class="small text-muted mb-2">Lowest eligible effective total cost; lead time breaks price ties.</div>
-                        <div class="d-flex flex-wrap gap-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <div class="h5 fw-bold mb-0" th:text="${rows[0].supplierName}">Recommended Supplier</div>
+                            <span class="status-pill status-approved">Recommended</span>
+                        </div>
+                        <div class="small text-muted mb-3">Lowest eligible effective total; shorter lead time breaks price ties.</div>
+                        <div class="d-flex flex-wrap gap-4">
                             <div><span class="small text-muted d-block">Unit price</span><strong th:text="${#numbers.formatDecimal(rows[0].unitPrice,1,2)}">0.00</strong></div>
                             <div><span class="small text-muted d-block">Lead time</span><strong th:text="${rows[0].leadTimeDays + ' days'}">0 days</strong></div>
                             <div><span class="small text-muted d-block">Total</span><strong th:text="${#numbers.formatDecimal(rows[0].totalCost,1,2)}">0.00</strong></div>
@@ -62,7 +60,7 @@
                     </div>
                     <div th:unless="${!#lists.isEmpty(rows) and rows[0].recommended}" class="mt-2">
                         <div class="h6 fw-bold mb-1">No eligible supplier found</div>
-                        <div class="small text-muted">Increase quantity to satisfy MOQ or update supplier/product terms.</div>
+                        <div class="small text-muted">No current supplier term satisfies this quantity and MOQ.</div>
                     </div>
                 </div>
             </div>
@@ -74,11 +72,11 @@
                     <thead>
                     <tr>
                         <th>Supplier</th>
-                        <th>Effective Unit Price</th>
+                        <th>Unit Price</th>
                         <th>MOQ</th>
                         <th>Lead Time</th>
                         <th>Offer</th>
-                        <th>Total Cost</th>
+                        <th>Estimated Total</th>
                         <th>Eligibility</th>
                         <th class="text-end no-print">Action</th>
                     </tr>
@@ -93,10 +91,7 @@
                         <td th:text="${row.moq}">1</td>
                         <td th:text="${row.leadTimeDays + ' days'}">3 days</td>
                         <td>
-                            <div th:if="${row.offerUsed}">
-                                <span class="status-pill status-shipped">Offer applied</span>
-                                <div class="small text-muted mt-1" th:text="${'Offer qty ' + row.offerQuantity}">Offer qty 10</div>
-                            </div>
+                            <span th:if="${row.offerUsed}" class="status-pill status-shipped">Offer applied</span>
                             <span th:unless="${row.offerUsed}" class="text-muted small">Standard terms</span>
                         </td>
                         <td><span class="compare-price" th:text="${#numbers.formatDecimal(row.totalCost,1,2)}">0.00</span></td>
@@ -106,9 +101,7 @@
                         </td>
                         <td class="text-end no-print">
                             <a th:if="${row.eligible}" class="btn btn-sm btn-primary"
-                               th:href="@{/supplier/purchase-orders/new(supplierId=${row.supplierId},suggestionId=${suggestion.suggestionId},quantity=${quantity},price=${row.unitPrice})}">
-                                Select Supplier
-                            </a>
+                               th:href="@{/supplier/purchase-orders/new(supplierId=${row.supplierId},suggestionId=${suggestion.suggestionId},quantity=${quantity},price=${row.unitPrice})}">Select Supplier</a>
                             <button th:unless="${row.eligible}" class="btn btn-sm btn-light border" type="button" disabled>Not Eligible</button>
                         </td>
                     </tr>
@@ -116,9 +109,9 @@
                 </table>
             </div>
             <div class="empty-state" th:if="${#lists.isEmpty(rows)}">
-                <div class="empty-symbol">C</div>
+                <div class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M5 7h14M5 7l-3 6h6L5 7ZM19 7l-3 6h6l-3-6Z"/></svg></div>
                 <h3 class="h6 text-dark">No supplier terms available</h3>
-                <p class="mb-0">No supplier/product pricing records were found for this product.</p>
+                <p class="mb-0">No supplier pricing records were found for this product.</p>
             </div>
         </div>
     </div>
