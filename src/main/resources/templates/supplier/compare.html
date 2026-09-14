@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Compare Suppliers', content=~{::main})}">
+<body>
+<main class="supplier-page">
+    <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <div class="page-kicker">Supplier Comparison</div>
+            <h1 class="page-title h2">Choose the Best Supplier</h1>
+            <p class="page-subtitle mb-0">
+                Comparing terms for <strong th:text="${suggestion.product.name}">Product</strong>
+                using the requested quantity below.
+            </p>
+        </div>
+        <a class="btn btn-outline-secondary no-print" th:href="@{/supplier/restock-requirements}">← Back to Requirements</a>
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: subnav('restock')}"></th:block>
+
+    <div class="supplier-shell">
+        <div class="row g-3 mb-4">
+            <div class="col-lg-7">
+                <div class="panel-card h-100">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-7">
+                            <div class="metric-label">Restock Requirement</div>
+                            <h2 class="h5 fw-bold mt-2 mb-1" th:text="${suggestion.product.name}">Product Name</h2>
+                            <div class="text-muted small">
+                                <span th:text="${suggestion.product.brand}">Brand</span>
+                                <span> · </span>
+                                <span th:text="${suggestion.product.category}">Category</span>
+                                <span th:if="${suggestion.product.productCode != null}"> · </span>
+                                <span th:if="${suggestion.product.productCode != null}" th:text="${suggestion.product.productCode}">Code</span>
+                            </div>
+                        </div>
+                        <div class="col-md-5 no-print">
+                            <form th:action="@{/supplier/compare}" method="get">
+                                <input type="hidden" name="suggestionId" th:value="${suggestion.suggestionId}"/>
+                                <label class="form-label" for="quantity">Required Quantity</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="quantity" name="quantity" type="number" min="1" th:value="${quantity}" required/>
+                                    <button class="btn btn-outline-primary" type="submit">Recalculate</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="recommend-card h-100">
+                    <div class="metric-label">Recommendation</div>
+                    <div th:if="${!#lists.isEmpty(rows) and rows[0].recommended}" class="mt-2">
+                        <div class="h5 fw-bold mb-1" th:text="${rows[0].supplierName}">Recommended Supplier</div>
+                        <div class="small text-muted mb-2">Lowest eligible effective total cost; lead time breaks price ties.</div>
+                        <div class="d-flex flex-wrap gap-3">
+                            <div><span class="small text-muted d-block">Unit price</span><strong th:text="${#numbers.formatDecimal(rows[0].unitPrice,1,2)}">0.00</strong></div>
+                            <div><span class="small text-muted d-block">Lead time</span><strong th:text="${rows[0].leadTimeDays + ' days'}">0 days</strong></div>
+                            <div><span class="small text-muted d-block">Total</span><strong th:text="${#numbers.formatDecimal(rows[0].totalCost,1,2)}">0.00</strong></div>
+                        </div>
+                    </div>
+                    <div th:unless="${!#lists.isEmpty(rows) and rows[0].recommended}" class="mt-2">
+                        <div class="h6 fw-bold mb-1">No eligible supplier found</div>
+                        <div class="small text-muted">Increase quantity to satisfy MOQ or update supplier/product terms.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card p-0 overflow-hidden">
+            <div class="table-responsive" th:if="${!#lists.isEmpty(rows)}">
+                <table class="table table-modern">
+                    <thead>
+                    <tr>
+                        <th>Supplier</th>
+                        <th>Effective Unit Price</th>
+                        <th>MOQ</th>
+                        <th>Lead Time</th>
+                        <th>Offer</th>
+                        <th>Total Cost</th>
+                        <th>Eligibility</th>
+                        <th class="text-end no-print">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${rows}" th:classappend="${row.recommended} ? 'recommended-row' : ''">
+                        <td>
+                            <div class="fw-bold" th:text="${row.supplierName}">Supplier</div>
+                            <span th:if="${row.recommended}" class="status-pill status-approved mt-1">Recommended</span>
+                        </td>
+                        <td><span class="money" th:text="${#numbers.formatDecimal(row.unitPrice,1,2)}">0.00</span></td>
+                        <td th:text="${row.moq}">1</td>
+                        <td th:text="${row.leadTimeDays + ' days'}">3 days</td>
+                        <td>
+                            <div th:if="${row.offerUsed}">
+                                <span class="status-pill status-shipped">Offer applied</span>
+                                <div class="small text-muted mt-1" th:text="${'Offer qty ' + row.offerQuantity}">Offer qty 10</div>
+                            </div>
+                            <span th:unless="${row.offerUsed}" class="text-muted small">Standard terms</span>
+                        </td>
+                        <td><span class="compare-price" th:text="${#numbers.formatDecimal(row.totalCost,1,2)}">0.00</span></td>
+                        <td>
+                            <span th:if="${row.eligible}" class="status-pill status-approved">Eligible</span>
+                            <span th:unless="${row.eligible}" class="status-pill status-rejected">Below MOQ</span>
+                        </td>
+                        <td class="text-end no-print">
+                            <a th:if="${row.eligible}" class="btn btn-sm btn-primary"
+                               th:href="@{/supplier/purchase-orders/new(supplierId=${row.supplierId},suggestionId=${suggestion.suggestionId},quantity=${quantity},price=${row.unitPrice})}">
+                                Select Supplier
+                            </a>
+                            <button th:unless="${row.eligible}" class="btn btn-sm btn-light border" type="button" disabled>Not Eligible</button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="empty-state" th:if="${#lists.isEmpty(rows)}">
+                <div class="empty-symbol">C</div>
+                <h3 class="h6 text-dark">No supplier terms available</h3>
+                <p class="mb-0">No supplier/product pricing records were found for this product.</p>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: scripts}"></th:block>
+</main>
+</body>
+</html>
