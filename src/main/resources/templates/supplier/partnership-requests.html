@@ -6,16 +6,16 @@
     <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
     <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
 
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <header class="page-header">
         <div>
-            <div class="page-kicker">Vendor Onboarding Review</div>
-            <h1 class="page-title h2">Partnership Requests</h1>
-            <p class="page-subtitle mb-0">Review prospective suppliers and record an approval or rejection decision.</p>
+            <div class="page-kicker">Supplier Onboarding</div>
+            <h1 class="page-title">Partnership Requests</h1>
+            <p class="page-subtitle mb-0">Review prospective supplier information and record an approval or rejection decision.</p>
         </div>
         <div class="search-box no-print">
             <input class="form-control" type="search" placeholder="Search requests..." data-table-search="partnershipTable" aria-label="Search partnership requests"/>
         </div>
-    </div>
+    </header>
 
     <th:block th:replace="~{supplier/_fragments :: subnav('partnerships')}"></th:block>
 
@@ -26,34 +26,30 @@
                 <tr>
                     <th>Company</th>
                     <th>Contact Person</th>
-                    <th>Catalog</th>
+                    <th>Email</th>
                     <th>Submitted</th>
                     <th>Status</th>
-                    <th class="text-end no-print">Decision</th>
+                    <th class="text-end no-print">Action</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="request : ${requests}" data-search-row>
                     <td>
                         <div class="fw-bold" th:text="${request.companyName}">Company</div>
-                        <a class="small" th:href="${'mailto:' + request.email}" th:text="${request.email}">email@example.com</a>
+                        <div th:if="${request.catalogFilePath != null and !#strings.isEmpty(request.catalogFilePath)}" class="text-muted small mt-1">
+                            Catalog: <span th:text="${request.catalogFilePath}">catalog.pdf</span>
+                        </div>
                     </td>
                     <td th:text="${request.contactPerson}">Contact Person</td>
-                    <td>
-                        <span th:if="${request.catalogFilePath != null and !#strings.isEmpty(request.catalogFilePath)}"
-                              class="code-chip" th:text="${request.catalogFilePath}">catalog.pdf</span>
-                        <span th:unless="${request.catalogFilePath != null and !#strings.isEmpty(request.catalogFilePath)}" class="text-muted small">No catalog path</span>
-                    </td>
+                    <td><a th:href="${'mailto:' + request.email}" th:text="${request.email}">email@example.com</a></td>
                     <td class="small text-muted" th:text="${request.submittedAt != null ? request.submittedAt : '—'}">—</td>
-                    <td>
-                        <span th:class="${'status-pill status-' + request.status}" th:text="${request.status}">pending</span>
-                    </td>
+                    <td><span th:class="${'status-pill status-' + request.status}" th:text="${request.status}">pending</span></td>
                     <td class="text-end no-print">
                         <div th:if="${request.status.name() == 'pending'}" class="d-flex justify-content-end gap-2">
                             <form th:action="@{/supplier/partnerships/{id}/decision(id=${request.requestId})}" method="post"
                                   data-confirm="Approve this partnership request? This records the decision but does not create a portal password.">
                                 <input type="hidden" name="decision" value="approved"/>
-                                <button class="btn btn-sm btn-success" type="submit">Approve</button>
+                                <button class="btn btn-sm btn-outline-success" type="submit">Approve</button>
                             </form>
                             <form th:action="@{/supplier/partnerships/{id}/decision(id=${request.requestId})}" method="post"
                                   data-confirm="Reject this partnership request?">
@@ -68,15 +64,13 @@
             </table>
         </div>
         <div class="empty-state" th:if="${#lists.isEmpty(requests)}">
-            <div class="empty-symbol">P</div>
-            <h3 class="h6 text-dark">No partnership requests</h3>
-            <p class="mb-0">Supplier submissions from the restricted supplier portal will appear here.</p>
+            <div class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 11 3 6l3-3 5 5M16 11l5-5-3-3-5 5"/><path d="m8 11 3 3a2 2 0 0 0 3 0l2-2"/></svg></div>
+            <h3 class="h6 text-dark">No partnership requests awaiting review</h3>
+            <p class="mb-0">Supplier submissions will appear here when received.</p>
         </div>
     </div>
 
-    <div class="note-box mt-3">
-        Approval records the partnership decision only. Secure supplier portal account creation remains separate because a supplier password hash is required by the database.
-    </div>
+    <div class="info-box mt-3">Approval records the partnership decision only. Secure supplier portal account creation remains separate.</div>
 
     <th:block th:replace="~{supplier/_fragments :: scripts}"></th:block>
 </main>
