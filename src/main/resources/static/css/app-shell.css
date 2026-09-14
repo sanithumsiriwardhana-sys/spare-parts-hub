@@ -1,0 +1,107 @@
+:root {
+    --app-blue: #2563eb;
+    --app-blue-dark: #1d4ed8;
+    --app-blue-soft: #eff6ff;
+    --app-ink: #172033;
+    --app-muted: #64748b;
+    --app-border: #e2e8f0;
+}
+
+body {
+    background: #ffffff;
+    color: var(--app-ink);
+}
+
+.app-navbar {
+    background: rgba(255, 255, 255, .98);
+    border-bottom: 1px solid var(--app-border);
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .035);
+    min-height: 68px;
+    padding: .55rem clamp(.85rem, 2vw, 1.65rem);
+    z-index: 1030;
+}
+
+.app-navbar .navbar-brand {
+    align-items: center;
+    display: inline-flex;
+    margin-right: 1.25rem;
+    padding: 0;
+}
+
+.app-navbar .brand-logo {
+    display: block;
+    height: 44px;
+    width: auto;
+}
+
+.app-navbar .navbar-nav {
+    gap: .12rem;
+}
+
+.app-navbar .nav-link {
+    border-radius: .7rem;
+    color: #536176;
+    font-size: .9rem;
+    font-weight: 650;
+    padding: .58rem .7rem !important;
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.app-navbar .nav-link:hover,
+.app-navbar .nav-link:focus {
+    background: #f8fafc;
+    color: var(--app-blue);
+}
+
+.app-navbar .nav-link.active {
+    background: var(--app-blue-soft);
+    color: var(--app-blue);
+}
+
+.app-navbar .navbar-toggler {
+    border-color: #cbd5e1;
+    box-shadow: none !important;
+}
+
+.app-navbar .navbar-toggler-icon {
+    filter: none;
+}
+
+.app-navbar .user-name {
+    color: #475569;
+    font-size: .88rem;
+    font-weight: 650;
+    max-width: 210px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-navbar .logout-btn {
+    border-color: #bfdbfe;
+    color: var(--app-blue-dark);
+    font-weight: 700;
+}
+
+.app-navbar .logout-btn:hover {
+    background: var(--app-blue);
+    border-color: var(--app-blue);
+    color: #fff;
+}
+
+@media (max-width: 1199.98px) {
+    .app-navbar .nav-link { font-size: .84rem; padding-inline: .55rem !important; }
+    .app-navbar .brand-logo { height: 40px; }
+}
+
+@media (max-width: 991.98px) {
+    .app-navbar { min-height: 62px; }
+    .app-navbar .navbar-collapse {
+        border-top: 1px solid var(--app-border);
+        margin-top: .7rem;
+        padding-top: .65rem;
+    }
+    .app-navbar .navbar-nav { gap: .2rem; }
+    .app-navbar .user-area { align-items: stretch !important; margin-top: .55rem; }
+    .app-navbar .logout-btn { width: 100%; }
+}
