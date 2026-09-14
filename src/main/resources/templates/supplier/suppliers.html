@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Supplier Records', content=~{::main})}">
+<body>
+<main class="supplier-page">
+    <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
+    <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <div class="page-kicker">Supplier Directory</div>
+            <h1 class="page-title h2">Supplier Records</h1>
+            <p class="page-subtitle mb-0">Maintain approved supplier contact information used by purchasing and the supplier portal.</p>
+        </div>
+        <div class="search-box no-print">
+            <input class="form-control" type="search" placeholder="Search suppliers..." data-table-search="supplierTable" aria-label="Search suppliers"/>
+        </div>
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: subnav('suppliers')}"></th:block>
+
+    <div class="panel-card p-0 overflow-hidden">
+        <div class="table-responsive" th:if="${!#lists.isEmpty(suppliers)}">
+            <table class="table table-modern" id="supplierTable">
+                <thead>
+                <tr>
+                    <th>Supplier</th>
+                    <th>Code</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th class="text-end no-print">Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="supplier : ${suppliers}" data-search-row>
+                    <td>
+                        <div class="fw-bold" th:text="${supplier.name}">Supplier Name</div>
+                        <div class="text-muted small" th:text="${'Supplier #' + supplier.supplierId}">Supplier #1</div>
+                    </td>
+                    <td>
+                        <span class="code-chip" th:text="${supplier.supplierCode != null ? supplier.supplierCode : 'Not assigned'}">SUP-001</span>
+                    </td>
+                    <td th:text="${supplier.contact}">0771234567</td>
+                    <td><a th:href="${'mailto:' + supplier.email}" th:text="${supplier.email}">supplier@example.com</a></td>
+                    <td class="text-end no-print">
+                        <a class="btn btn-sm btn-outline-primary" th:href="@{/supplier/records/{id}/edit(id=${supplier.supplierId})}">Edit Record</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="empty-state" th:if="${#lists.isEmpty(suppliers)}">
+            <div class="empty-symbol">S</div>
+            <h3 class="h6 text-dark">No supplier records yet</h3>
+            <p class="mb-0">Approved supplier accounts will appear here when they are available.</p>
+        </div>
+    </div>
+
+    <div class="note-box mt-3">
+        Supplier portal credentials are intentionally not displayed or edited from this screen. Supplier authentication remains separate from staff authentication.
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: scripts}"></th:block>
+</main>
+</body>
+</html>
