@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Restock Requirements', content=~{::main})}">
+<body>
+<main class="supplier-page">
+    <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
+    <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <div class="page-kicker">Approved Procurement Queue</div>
+            <h1 class="page-title h2">Restock Requirements</h1>
+            <p class="page-subtitle mb-0">Choose an approved or modified restock suggestion, then compare active supplier terms for that product.</p>
+        </div>
+        <div class="search-box no-print">
+            <input class="form-control" type="search" placeholder="Search products..." data-table-search="restockTable" aria-label="Search restock requirements"/>
+        </div>
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: subnav('restock')}"></th:block>
+
+    <div class="panel-card p-0 overflow-hidden">
+        <div class="table-responsive" th:if="${!#lists.isEmpty(suggestions)}">
+            <table class="table table-modern" id="restockTable">
+                <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category / Brand</th>
+                    <th>Current Stock</th>
+                    <th>Suggested Qty</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                    <th class="text-end no-print">Supplier Comparison</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="suggestion : ${suggestions}" data-search-row>
+                    <td>
+                        <div class="fw-bold" th:text="${suggestion.product.name}">Product</div>
+                        <span class="code-chip mt-1" th:text="${suggestion.product.productCode != null ? suggestion.product.productCode : 'No product code'}">PRD-001</span>
+                    </td>
+                    <td>
+                        <div th:text="${suggestion.product.category}">Category</div>
+                        <div class="small text-muted" th:text="${suggestion.product.brand}">Brand</div>
+                    </td>
+                    <td>
+                        <span class="fw-bold" th:text="${suggestion.product.stockCount}">0</span>
+                        <span class="small text-muted"> units</span>
+                    </td>
+                    <td class="fw-bold" th:text="${suggestion.suggestedQuantity}">10</td>
+                    <td><span th:class="${'status-pill status-' + suggestion.status}" th:text="${suggestion.status}">approved</span></td>
+                    <td class="small" style="max-width: 260px;" th:text="${suggestion.reason != null ? suggestion.reason : '—'}">—</td>
+                    <td class="text-end no-print">
+                        <form class="d-inline-flex gap-2 justify-content-end" th:action="@{/supplier/compare}" method="get">
+                            <input type="hidden" name="suggestionId" th:value="${suggestion.suggestionId}"/>
+                            <input class="form-control form-control-sm" style="width: 92px; min-height: 34px;" type="number" min="1"
+                                   name="quantity" th:value="${suggestion.suggestedQuantity}" aria-label="Required quantity"/>
+                            <button class="btn btn-sm btn-primary text-nowrap" type="submit">Compare Suppliers</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="empty-state" th:if="${#lists.isEmpty(suggestions)}">
+            <div class="empty-symbol">R</div>
+            <h3 class="h6 text-dark">No approved restock requirements</h3>
+            <p class="mb-0">Approved or modified suggestions from Dynamic Urgency Score Tracking will appear here.</p>
+        </div>
+    </div>
+
+    <div class="note-box mt-3">
+        Supplier comparison excludes terms that fail MOQ and recommends the lowest eligible effective total price, using shorter lead time as the tie-breaker.
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: scripts}"></th:block>
+</main>
+</body>
+</html>
