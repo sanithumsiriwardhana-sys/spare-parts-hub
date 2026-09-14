@@ -1,16 +1,121 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: page(title='Suppliers', content=~{::main})}">
+      th:replace="~{fragments/layout :: page(title='Supplier Management', content=~{::main})}">
 <body>
-<main>
-    <h2>Supplier Management</h2>
-    <p class="text-muted">Actor: Shop Owner / Admin</p>
-    <ul>
-        <li>TODO: Compare supplier pricing / lead time</li>
-        <li>TODO: Generate purchase order</li>
-        <li>TODO: Export purchase order (PDF/CSV)</li>
-        <li>TODO: Track purchase order status</li>
-    </ul>
+<main class="supplier-page">
+    <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
+    <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <div class="page-kicker">UC-05 · Procurement Workspace</div>
+            <h1 class="page-title h2">Supplier Management</h1>
+            <p class="page-subtitle mb-0">
+                Compare approved suppliers, review partnership requests, issue digital purchase orders,
+                and receive supplier shipments from one admin workspace.
+            </p>
+        </div>
+        <a class="btn btn-primary no-print" th:href="@{/supplier/restock-requirements}">Start a Purchase</a>
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: subnav('dashboard')}"></th:block>
+
+    <div class="supplier-shell">
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-label">Supplier Records</div>
+                    <div class="metric-value mt-2" th:text="${supplierCount}">0</div>
+                    <div class="metric-note mt-2">Approved supplier accounts available to procurement.</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-label">Pending Partnerships</div>
+                    <div class="metric-value mt-2" th:text="${partnershipCount}">0</div>
+                    <div class="metric-note mt-2">Requests waiting for an Admin decision.</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-label">Restock Requirements</div>
+                    <div class="metric-value mt-2" th:text="${restockCount}">0</div>
+                    <div class="metric-note mt-2">Approved or modified requests ready for sourcing.</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-label">Purchase Orders</div>
+                    <div class="metric-value mt-2" th:text="${poCount}">0</div>
+                    <div class="metric-note mt-2">Purchase orders across the current lifecycle.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h2 class="panel-title">Procurement flow</h2>
+                    <div class="text-muted small mt-1">The UC-05 path from approved restock requirement to inventory receipt.</div>
+                </div>
+            </div>
+            <div class="workflow">
+                <div class="workflow-step">
+                    <strong>1. Review requirement</strong>
+                    <span>Open an approved restock suggestion from Inventory.</span>
+                </div>
+                <div class="workflow-step">
+                    <strong>2. Compare suppliers</strong>
+                    <span>Evaluate price, MOQ, lead time and valid supplier offers.</span>
+                </div>
+                <div class="workflow-step">
+                    <strong>3. Issue PO</strong>
+                    <span>Confirm supplier, quantity and price to create a Pending PO.</span>
+                </div>
+                <div class="workflow-step">
+                    <strong>4. Track shipment</strong>
+                    <span>Move a Pending order to Shipped after dispatch is confirmed.</span>
+                </div>
+                <div class="workflow-step">
+                    <strong>5. Receive stock</strong>
+                    <span>Record accepted units and serial numbers, then update inventory.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-3">
+                <a class="action-card" th:href="@{/supplier/records}">
+                    <span class="action-index">01</span>
+                    <h3>Manage Supplier Records</h3>
+                    <p>Review contact details and maintain supplier master data without exposing portal passwords.</p>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <a class="action-card" th:href="@{/supplier/partnerships}">
+                    <span class="action-index">02</span>
+                    <h3>Partnership Requests</h3>
+                    <p>Review supplier company information and approve or reject pending requests.</p>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <a class="action-card" th:href="@{/supplier/restock-requirements}">
+                    <span class="action-index">03</span>
+                    <h3>Compare Supplier Terms</h3>
+                    <p>Start from an approved requirement and compare price, MOQ, lead time and offers.</p>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <a class="action-card" th:href="@{/supplier/purchase-orders}">
+                    <span class="action-index">04</span>
+                    <h3>Purchase Orders</h3>
+                    <p>Track Pending, Shipped, Partially Received and Received orders and export CSVs.</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:replace="~{supplier/_fragments :: scripts}"></th:block>
 </main>
 </body>
 </html>
