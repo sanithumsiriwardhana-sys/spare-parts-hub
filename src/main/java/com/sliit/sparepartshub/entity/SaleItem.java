@@ -35,6 +35,14 @@ public class SaleItem {
     @Column(name = "compatibility_override_reason", length = 255)
     private String compatibilityOverrideReason;
 
+    // UC-02: recorded when a Sales Executive manually lowers this
+    // line's price on the spot (see CartService.updatePrice /
+    // CheckoutService). Null when the item was sold at its catalog
+    // price. Kept distinct from compatibilityOverrideReason since the
+    // two are unrelated overrides that can both apply to the same line.
+    @Column(name = "discount_reason", length = 255)
+    private String discountReason;
+
     public SaleItem() {
     }
 
@@ -84,5 +92,13 @@ public class SaleItem {
 
     public void setCompatibilityOverrideReason(String compatibilityOverrideReason) {
         this.compatibilityOverrideReason = compatibilityOverrideReason;
+    }
+
+    public String getDiscountReason() {
+        return discountReason;
+    }
+
+    public void setDiscountReason(String discountReason) {
+        this.discountReason = discountReason;
     }
 }
