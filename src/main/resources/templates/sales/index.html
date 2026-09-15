@@ -3,14 +3,702 @@
       th:replace="~{fragments/layout :: page(title='Sales / POS', content=~{::main})}">
 <body>
 <main>
-    <h2>Product Search &amp; Automated Checkout</h2>
-    <p class="text-muted">Actor: Senior Sales Executive</p>
-    <ul>
-        <li>TODO: Search products by name/category/brand</li>
-        <li>TODO: Check compatibility warning</li>
-        <li>TODO: Complete checkout &amp; generate receipt</li>
-        <li>TODO: Auto-deduct stock on sale</li>
-    </ul>
+    <div class="row">
+        <!-- Browse / search column -->
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="mb-0">Product Search &amp; Checkout</h2>
+                <a th:href="@{/sales/history}" class="btn btn-outline-secondary btn-sm">Sales History</a>
+            </div>
+
+            <input type="text" id="searchInput" th:value="${keyword}" class="form-control form-control-lg mb-3"
+                   placeholder="Search by name, brand, or category&hellip;" autocomplete="off"/>
+
+            <ul class="nav nav-tabs mb-3" id="categoryTabs">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-category=""
+                       th:classappend="${category == ''} ? 'active'">All</a>
+                </li>
+                <li class="nav-item" th:each="c : ${filterOptions.categories}">
+                    <a class="nav-link" href="#" th:attr="data-category=${c}" th:text="${c}"
+                       th:classappend="${c == category} ? 'active'">Category</a>
+                </li>
+            </ul>
+
+            <div id="emptyState" class="alert alert-secondary" th:style="${#lists.isEmpty(results)} ? '' : 'display:none;'">
+                No products match your search.
+            </div>
+
+            <div id="resultsGrid" class="row g-3">
+                <div class="col-md-6 col-xl-4 product-card" th:each="p : ${results}">
+                    <div class="card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <h6 class="card-title mb-0" th:text="${p.name}">Product</h6>
+                                <span class="badge"
+                                      th:classappend="${p.stockCount == 0} ? 'bg-danger' : (${p.stockCount <= 5} ? 'bg-warning text-dark' : 'bg-success')"
+                                      th:text="${p.stockCount}">0</span>
+                            </div>
+                            <p class="text-muted small mb-2" th:text="${p.brand} + ' &middot; ' + ${p.category}">Brand &middot; Category</p>
+                            <p class="fw-semibold mb-3 mt-auto" th:text="'LKR ' + ${p.price}">LKR 0.00</p>
+                            <div class="d-flex gap-2">
+                                <input type="number" class="form-control form-control-sm qty-input" style="width: 4.5rem;"
+                                       value="1" min="1" th:max="${p.stockCount}" th:disabled="${p.stockCount == 0}"/>
+                                <button type="button" class="btn btn-sm btn-primary add-to-cart-btn flex-grow-1"
+                                        th:attr="data-product-id=${p.productId}"
+                                        th:disabled="${p.stockCount == 0}"
+                                        th:text="${p.stockCount == 0} ? 'Out of Stock' : 'Add to Cart'">
+                                    Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cart column - the running sale. Session-backed (see
+             CartService) so it survives a page reload but resets on
+             logout, matching one cashier terminal / one in-progress
+             sale. -->
+        <div class="col-lg-4">
+            <div id="compatibilityWarning" class="alert alert-warning" style="display:none;"></div>
+
+            <div class="card position-sticky" style="top: 1rem;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Current Sale</span>
+                    <span class="badge bg-secondary" id="cartCount" th:text="${cartItemCount} + ' item(s)'">0 item(s)</span>
+                </div>
+
+                <div class="card-body p-0">
+                    <div id="cartEmptyState" class="text-center text-muted py-5"
+                         th:style="${#lists.isEmpty(cart)} ? '' : 'display:none;'">
+                        <p class="mb-1">Cart is empty.</p>
+                        <p class="small mb-0">Add items to get started.</p>
+                    </div>
+
+                    <ul id="cartItemsList" class="list-group list-group-flush"
+                        th:style="${#lists.isEmpty(cart)} ? 'display:none;' : ''">
+                        <li class="list-group-item d-flex justify-content-between align-items-center"
+                            th:each="item : ${cart}" th:attr="data-product-id=${item.productId}">
+                            <div>
+                                <div class="fw-semibold" th:text="${item.name}">Name</div>
+                                <div class="text-muted small">
+                                    <span th:text="${item.quantity} + ' &times; '">Qty</span>
+                                    <!-- Original catalog price shown struck-through
+                                         when this line has been manually discounted
+                                         on the spot (see CartService.updatePrice) -
+                                         keeps the discount visible in the cart
+                                         itself, not just on the receipt afterward. -->
+                                    <span th:if="${item.price.compareTo(item.originalPrice) != 0}"
+                                          class="text-decoration-line-through text-muted me-1"
+                                          th:text="'LKR ' + ${item.originalPrice}">LKR 0.00</span>
+                                    <span th:text="'LKR ' + ${item.price}">LKR 0.00</span>
+                                </div>
+                                <!-- Serial-tracked items show which specific
+                                     units are staged for this sale. -->
+                                <div class="text-muted small" th:if="${!#lists.isEmpty(item.selectedSerials)}">
+                                    SN:
+                                    <span th:each="s, iter : ${item.selectedSerials}">
+                                        <span th:text="${s.serialValue}">SN-001</span><span th:unless="${iter.last}">, </span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-semibold mb-1" th:text="'LKR ' + ${item.subtotal}">Subtotal</div>
+                                <button type="button" class="btn btn-sm btn-link p-0 me-2 edit-price-item"
+                                        th:attr="data-product-id=${item.productId},data-name=${item.name},
+                                                 data-price=${item.price},data-original-price=${item.originalPrice}">
+                                    Edit Price
+                                </button>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 remove-cart-item"
+                                        th:attr="data-product-id=${item.productId}">Remove</button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Total</span>
+                        <span class="fw-semibold" id="cartTotal" th:text="'LKR ' + ${cartTotal}">LKR 0.00</span>
+                    </div>
+                    <button type="button" id="checkoutBtn" class="btn btn-success w-100"
+                            th:disabled="${#lists.isEmpty(cart)}">
+                        Complete Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Serial-number picker - shown only when the product being added
+         actually has in-stock serial rows (see SerialNumberService's
+         class comment for how that's determined). One shared modal,
+         populated per Add to Cart click, rather than one per card. -->
+    <div class="modal fade" id="serialPickerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Serial Numbers</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small" id="serialPickerHint">Select serial number(s).</p>
+                    <div id="serialPickerList" class="list-group"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="serialPickerConfirm" disabled>
+                        Confirm &amp; Add to Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- On-the-spot price edit - lets a Sales Executive lower an
+         already-added line's price for this sale only (see
+         CartService.updatePrice). Reason is always optional. -->
+    <div class="modal fade" id="priceEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Price</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        <strong id="priceEditProductName">Product</strong><br/>
+                        <span class="text-muted small">Catalog price: <span id="priceEditOriginalPrice">LKR 0.00</span></span>
+                    </p>
+                    <div class="mb-2">
+                        <label for="priceEditInput" class="form-label small">New price (LKR)</label>
+                        <input type="number" id="priceEditInput" class="form-control" min="0.01" step="0.01"/>
+                    </div>
+                    <div class="mb-2">
+                        <label for="priceEditReason" class="form-label small">Reason (optional)</label>
+                        <textarea id="priceEditReason" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div id="priceEditError" class="text-danger small" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="priceEditConfirm">Save Price</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+    (function () {
+        const searchInput = document.getElementById('searchInput');
+        const tabs = document.getElementById('categoryTabs');
+        const resultsGrid = document.getElementById('resultsGrid');
+        const emptyState = document.getElementById('emptyState');
+
+        const cartCount = document.getElementById('cartCount');
+        const cartTotalEl = document.getElementById('cartTotal');
+        const cartEmptyState = document.getElementById('cartEmptyState');
+        const cartItemsList = document.getElementById('cartItemsList');
+        const compatibilityWarning = document.getElementById('compatibilityWarning');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+
+        const serialPickerModalEl = document.getElementById('serialPickerModal');
+        const serialPickerList = document.getElementById('serialPickerList');
+        const serialPickerHint = document.getElementById('serialPickerHint');
+        const serialPickerConfirm = document.getElementById('serialPickerConfirm');
+        let serialPickerModalInstance = null;
+        let pendingProductId = null;
+        let pendingQuantity = 0;
+        let selectedSerialIds = [];
+
+        const priceEditModalEl = document.getElementById('priceEditModal');
+        const priceEditProductName = document.getElementById('priceEditProductName');
+        const priceEditOriginalPrice = document.getElementById('priceEditOriginalPrice');
+        const priceEditInput = document.getElementById('priceEditInput');
+        const priceEditReason = document.getElementById('priceEditReason');
+        const priceEditError = document.getElementById('priceEditError');
+        const priceEditConfirm = document.getElementById('priceEditConfirm');
+        let priceEditModalInstance = null;
+        let priceEditProductId = null;
+
+        // Read once - layout.html exposes these via meta tags so any
+        // page's JS can attach a valid CSRF token to fetch() POSTs.
+        // Without this, Spring Security returns 403 before the request
+        // ever reaches CartController.
+        const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+        function postForm(url, params) {
+            const headers = {'Content-Type': 'application/x-www-form-urlencoded'};
+            headers[csrfHeader] = csrfToken;
+            return fetch(url, {method: 'POST', headers: headers, body: params.toString()});
+        }
+
+        let debounceTimer = null;
+
+        function money(value) {
+            return 'LKR ' + Number(value).toFixed(2);
+        }
+
+        function stockBadgeClass(stockCount) {
+            if (stockCount === 0) return 'bg-danger';
+            if (stockCount <= 5) return 'bg-warning text-dark';
+            return 'bg-success';
+        }
+
+        // ---------- Product search grid ----------
+
+        function buildCard(item) {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-xl-4 product-card';
+
+            const card = document.createElement('div');
+            card.className = 'card h-100';
+
+            const body = document.createElement('div');
+            body.className = 'card-body d-flex flex-column';
+
+            const top = document.createElement('div');
+            top.className = 'd-flex justify-content-between align-items-start mb-1';
+
+            const title = document.createElement('h6');
+            title.className = 'card-title mb-0';
+            title.textContent = item.name;
+
+            const badge = document.createElement('span');
+            badge.className = 'badge ' + stockBadgeClass(item.stockCount);
+            badge.textContent = item.stockCount;
+
+            top.append(title, badge);
+
+            const meta = document.createElement('p');
+            meta.className = 'text-muted small mb-2';
+            meta.textContent = item.brand + ' \u00B7 ' + item.category;
+
+            const price = document.createElement('p');
+            price.className = 'fw-semibold mb-3 mt-auto';
+            price.textContent = money(item.price);
+
+            const controls = document.createElement('div');
+            controls.className = 'd-flex gap-2';
+
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'number';
+            qtyInput.className = 'form-control form-control-sm qty-input';
+            qtyInput.style.width = '4.5rem';
+            qtyInput.value = '1';
+            qtyInput.min = '1';
+            qtyInput.max = String(item.stockCount);
+            qtyInput.disabled = item.stockCount === 0;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-primary add-to-cart-btn flex-grow-1';
+            btn.dataset.productId = item.productId;
+            btn.disabled = item.stockCount === 0;
+            btn.textContent = item.stockCount === 0 ? 'Out of Stock' : 'Add to Cart';
+
+            controls.append(qtyInput, btn);
+            body.append(top, meta, price, controls);
+            card.appendChild(body);
+            col.appendChild(card);
+            return col;
+        }
+
+        function renderResults(items) {
+            resultsGrid.innerHTML = '';
+            emptyState.style.display = items.length === 0 ? '' : 'none';
+            items.forEach(item => resultsGrid.appendChild(buildCard(item)));
+        }
+
+        function activeCategory() {
+            const active = tabs.querySelector('.nav-link.active');
+            return active ? active.dataset.category : '';
+        }
+
+        function performSearch() {
+            const params = new URLSearchParams();
+            const keyword = searchInput.value.trim();
+            const category = activeCategory();
+            if (keyword) params.set('keyword', keyword);
+            if (category) params.set('category', category);
+
+            fetch('/sales/api/search?' + params.toString())
+                .then(res => {
+                    if (!res.ok) throw new Error('Search request failed');
+                    return res.json();
+                })
+                .then(renderResults)
+                .catch(() => {
+                    // Network/server hiccup - leave the last known
+                    // results on screen rather than clearing a working
+                    // list because of one failed request.
+                });
+        }
+
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(performSearch, 300);
+        });
+
+        tabs.addEventListener('click', function (e) {
+            const link = e.target.closest('.nav-link');
+            if (!link) return;
+            e.preventDefault();
+            tabs.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            link.classList.add('active');
+            performSearch();
+        });
+
+        // ---------- Cart ----------
+
+        function buildCartRow(item) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.dataset.productId = item.productId;
+
+            const left = document.createElement('div');
+            const name = document.createElement('div');
+            name.className = 'fw-semibold';
+            name.textContent = item.name;
+
+            const qtyLine = document.createElement('div');
+            qtyLine.className = 'text-muted small';
+            const isDiscounted = Number(item.price) !== Number(item.originalPrice);
+            if (isDiscounted) {
+                const original = document.createElement('span');
+                original.className = 'text-decoration-line-through text-muted me-1';
+                original.textContent = money(item.originalPrice);
+                qtyLine.append(item.quantity + ' \u00D7 ', original, ' ' + money(item.price));
+            } else {
+                qtyLine.textContent = item.quantity + ' \u00D7 ' + money(item.price);
+            }
+            left.append(name, qtyLine);
+
+            if (item.selectedSerials && item.selectedSerials.length > 0) {
+                const serialLine = document.createElement('div');
+                serialLine.className = 'text-muted small';
+                serialLine.textContent = 'SN: ' + item.selectedSerials.map(s => s.serialValue).join(', ');
+                left.appendChild(serialLine);
+            }
+
+            const right = document.createElement('div');
+            right.className = 'text-end';
+            const subtotal = document.createElement('div');
+            subtotal.className = 'fw-semibold mb-1';
+            subtotal.textContent = money(item.price * item.quantity);
+
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'btn btn-sm btn-link p-0 me-2 edit-price-item';
+            editBtn.dataset.productId = item.productId;
+            editBtn.dataset.name = item.name;
+            editBtn.dataset.price = item.price;
+            editBtn.dataset.originalPrice = item.originalPrice;
+            editBtn.textContent = 'Edit Price';
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-link text-danger p-0 remove-cart-item';
+            removeBtn.dataset.productId = item.productId;
+            removeBtn.textContent = 'Remove';
+
+            right.append(subtotal, editBtn, removeBtn);
+
+            li.append(left, right);
+            return li;
+        }
+
+        function renderCart(data) {
+            cartItemsList.innerHTML = '';
+            const isEmpty = data.items.length === 0;
+            cartEmptyState.style.display = isEmpty ? '' : 'none';
+            cartItemsList.style.display = isEmpty ? 'none' : '';
+            data.items.forEach(item => cartItemsList.appendChild(buildCartRow(item)));
+            cartTotalEl.textContent = money(data.total);
+            cartCount.textContent = data.itemCount + ' item(s)';
+            checkoutBtn.disabled = isEmpty;
+        }
+
+        function showConflicts(messages, heading) {
+            if (!messages || messages.length === 0) {
+                compatibilityWarning.style.display = 'none';
+                return;
+            }
+            compatibilityWarning.innerHTML = '';
+            const headingEl = document.createElement('strong');
+            headingEl.textContent = heading || 'Compatibility warning';
+            compatibilityWarning.appendChild(headingEl);
+            const list = document.createElement('ul');
+            list.className = 'mb-0 mt-1 ps-3';
+            messages.forEach(msg => {
+                const li = document.createElement('li');
+                li.textContent = msg;
+                list.appendChild(li);
+            });
+            compatibilityWarning.appendChild(list);
+            compatibilityWarning.style.display = '';
+        }
+
+        function showError(message) {
+            compatibilityWarning.className = 'alert alert-danger';
+            compatibilityWarning.textContent = message;
+            compatibilityWarning.style.display = '';
+        }
+
+        function resetWarningStyle() {
+            compatibilityWarning.className = 'alert alert-warning';
+        }
+
+        // Actually performs the Add to Cart call - called either
+        // directly (non-serialized product) or after the serial picker
+        // is confirmed.
+        function addToCartRequest(productId, quantity, serialIds) {
+            const body = new URLSearchParams();
+            body.set('productId', productId);
+            body.set('quantity', quantity);
+            (serialIds || []).forEach(id => body.append('serialIds', id));
+
+            postForm('/sales/cart/add', body)
+                .then(res => res.json().then(data => ({ok: res.ok, data})))
+                .then(({ok, data}) => {
+                    if (!ok) {
+                        showError(data.error || 'Could not add item to cart.');
+                        return;
+                    }
+                    resetWarningStyle();
+                    renderCart(data);
+                    const messages = (data.conflicts || []).map(c =>
+                        c.productAName + ' + ' + c.productBName + ': ' + c.reason);
+                    showConflicts(messages);
+                })
+                .catch(() => {
+                    // Leave the cart as last rendered on a network hiccup.
+                });
+        }
+
+        function openSerialPicker(productId, quantity, availableSerials) {
+            pendingProductId = productId;
+            pendingQuantity = quantity;
+            selectedSerialIds = [];
+
+            serialPickerHint.textContent = 'Select exactly ' + quantity + ' serial number(s) for this item.';
+            serialPickerList.innerHTML = '';
+            serialPickerConfirm.disabled = true;
+
+            availableSerials.forEach(function (serial) {
+                const label = document.createElement('label');
+                label.className = 'list-group-item d-flex align-items-center gap-2';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'form-check-input mt-0';
+                checkbox.value = serial.serialId;
+
+                const text = document.createElement('span');
+                text.textContent = serial.serialValue + ' (received ' + serial.receivedDateLabel + ')';
+
+                label.append(checkbox, text);
+                serialPickerList.appendChild(label);
+
+                checkbox.addEventListener('change', function () {
+                    if (checkbox.checked) {
+                        if (selectedSerialIds.length >= pendingQuantity) {
+                            checkbox.checked = false;
+                            return;
+                        }
+                        selectedSerialIds.push(serial.serialId);
+                    } else {
+                        selectedSerialIds = selectedSerialIds.filter(id => id !== serial.serialId);
+                    }
+                    serialPickerConfirm.disabled = selectedSerialIds.length !== pendingQuantity;
+                });
+            });
+
+            if (!serialPickerModalInstance) {
+                serialPickerModalInstance = new bootstrap.Modal(serialPickerModalEl);
+            }
+            serialPickerModalInstance.show();
+        }
+
+        serialPickerConfirm.addEventListener('click', function () {
+            if (selectedSerialIds.length !== pendingQuantity) return;
+            addToCartRequest(pendingProductId, pendingQuantity, selectedSerialIds);
+            serialPickerModalInstance.hide();
+        });
+
+        resultsGrid.addEventListener('click', function (e) {
+            const btn = e.target.closest('.add-to-cart-btn');
+            if (!btn) return;
+
+            const card = btn.closest('.product-card');
+            const qtyInput = card.querySelector('.qty-input');
+            const quantity = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : 1;
+            const productId = btn.dataset.productId;
+
+            // Always check first whether this product has in-stock
+            // serial rows - an empty list means it isn't serial-tracked
+            // and the normal add proceeds with no extra step.
+            fetch('/sales/products/' + productId + '/serials')
+                .then(res => res.json())
+                .then(serials => {
+                    if (!serials || serials.length === 0) {
+                        addToCartRequest(productId, quantity, []);
+                        return;
+                    }
+                    openSerialPicker(productId, quantity, serials);
+                })
+                .catch(() => {
+                    // Lookup failed - fall back to a normal add rather
+                    // than blocking the sale. Checkout re-validates
+                    // everything server-side regardless.
+                    addToCartRequest(productId, quantity, []);
+                });
+        });
+
+        cartItemsList.addEventListener('click', function (e) {
+            const removeBtn = e.target.closest('.remove-cart-item');
+            if (removeBtn) {
+                const body = new URLSearchParams();
+                body.set('productId', removeBtn.dataset.productId);
+
+                postForm('/sales/cart/remove', body)
+                    .then(res => res.json())
+                    .then(renderCart)
+                    .catch(() => {
+                        // Leave the cart as last rendered on a network hiccup.
+                    });
+                return;
+            }
+
+            const editBtn = e.target.closest('.edit-price-item');
+            if (editBtn) {
+                openPriceEditor(editBtn.dataset.productId, editBtn.dataset.name,
+                    editBtn.dataset.price, editBtn.dataset.originalPrice);
+            }
+        });
+
+        // ---------- Price edit ----------
+
+        function openPriceEditor(productId, name, currentPrice, originalPrice) {
+            priceEditProductId = productId;
+            priceEditProductName.textContent = name;
+            priceEditOriginalPrice.textContent = money(originalPrice);
+            priceEditInput.value = Number(currentPrice).toFixed(2);
+            priceEditReason.value = '';
+            priceEditError.style.display = 'none';
+            priceEditError.textContent = '';
+
+            if (!priceEditModalInstance) {
+                priceEditModalInstance = new bootstrap.Modal(priceEditModalEl);
+            }
+            priceEditModalInstance.show();
+        }
+
+        priceEditConfirm.addEventListener('click', function () {
+            const body = new URLSearchParams();
+            body.set('productId', priceEditProductId);
+            body.set('price', priceEditInput.value);
+            if (priceEditReason.value.trim()) {
+                body.set('reason', priceEditReason.value.trim());
+            }
+
+            postForm('/sales/cart/price', body)
+                .then(res => res.json().then(data => ({status: res.status, data})))
+                .then(({status, data}) => {
+                    if (status === 200) {
+                        priceEditModalInstance.hide();
+                        renderCart(data);
+                        return;
+                    }
+
+                    priceEditError.textContent = data.error || 'Could not update the price.';
+                    priceEditError.style.display = '';
+                })
+                .catch(() => {
+                    priceEditError.textContent = 'Could not reach the server. Please try again.';
+                    priceEditError.style.display = '';
+                });
+        });
+
+        // ---------- Checkout ----------
+
+        function doCheckout(overrideReason, confirmPriceChanges) {
+            const body = new URLSearchParams();
+            if (overrideReason) {
+                body.set('overrideReason', overrideReason);
+            }
+            if (confirmPriceChanges) {
+                body.set('confirmPriceChanges', 'true');
+            }
+
+            checkoutBtn.disabled = true;
+
+            postForm('/sales/checkout', body)
+                .then(res => res.json().then(data => ({status: res.status, data})))
+                .then(({status, data}) => {
+                    if (status === 200 && data.success) {
+                        window.location.href = data.redirectUrl;
+                        return;
+                    }
+
+                    if (status === 409 && data.needsPriceConfirmation) {
+                        resetWarningStyle();
+                        const messages = (data.priceChanges || []).map(p =>
+                            p.productName + ': ' + money(p.oldPrice) + ' -> ' + money(p.newPrice));
+                        showConflicts(messages, 'Price changed since this item was added');
+
+                        // Confirm rather than prompt - there's nothing for
+                        // the cashier to type, just accept-or-not the new
+                        // total (UC-02 10a).
+                        const proceed = window.confirm(
+                            'One or more prices changed since these items were added to the cart (see warning above).\n' +
+                            'Continue checkout at the new price(s)?'
+                        );
+                        checkoutBtn.disabled = false;
+                        if (proceed) {
+                            doCheckout(overrideReason, true);
+                        }
+                        return;
+                    }
+
+                    if (status === 409 && data.needsOverrideReason) {
+                        resetWarningStyle();
+                        const messages = (data.conflicts || []).map(c =>
+                            c.productAName + ' + ' + c.productBName + ': ' + c.reason);
+                        showConflicts(messages, 'Compatibility warning');
+
+                        // Simple prompt rather than a custom modal - keeps
+                        // the override an explicit, deliberate action by
+                        // the Sales Executive (UC-02 6a requires an
+                        // authorized reason, not a silent default).
+                        const reason = window.prompt(
+                            'Compatibility conflicts were found in this cart (see warning above).\n' +
+                            'Enter an authorized override reason to proceed, or Cancel to adjust the cart instead:'
+                        );
+                        checkoutBtn.disabled = false;
+                        if (reason && reason.trim()) {
+                            doCheckout(reason.trim(), confirmPriceChanges);
+                        }
+                        return;
+                    }
+
+                    checkoutBtn.disabled = false;
+                    showError(data.error || 'Checkout failed. Please try again.');
+                })
+                .catch(() => {
+                    checkoutBtn.disabled = false;
+                    showError('Could not reach the server. Please try again.');
+                });
+        }
+
+        checkoutBtn.addEventListener('click', function () {
+            doCheckout(null, false);
+        });
+    })();
+    </script>
 </main>
 </body>
 </html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Receipt', content=~{::main})}">
+<body>
+<main>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Receipt</h2>
+        <div>
+            <a th:href="@{/sales/history}" class="btn btn-outline-secondary btn-sm">Sales History</a>
+            <a th:href="@{/sales}" class="btn btn-outline-secondary btn-sm">Back to Sales</a>
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">Print</button>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <p class="mb-1"><strong>Sale Code:</strong> <span th:text="${sale.saleCode}">SALE-000001</span></p>
+            <p class="mb-1"><strong>Date:</strong> <span th:text="${formattedDate}">24 Aug 2026, 10:41 AM</span></p>
+            <p class="mb-0"><strong>Sold By:</strong> <span th:text="${sale.soldBy.name}">Name</span></p>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(lineItems)}" class="alert alert-secondary">No items on this sale.</div>
+
+    <table th:unless="${#lists.isEmpty(lineItems)}" class="table">
+        <thead>
+        <tr>
+            <th>Product</th>
+            <th class="text-end">Qty</th>
+            <th class="text-end">Price</th>
+            <th class="text-end">Subtotal</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="line : ${lineItems}">
+            <td>
+                <div th:text="${line.productName}">Product</div>
+                <div th:if="${!#lists.isEmpty(line.serialValues)}" class="text-muted small">
+                    SN:
+                    <span th:each="s, iter : ${line.serialValues}">
+                        <span th:text="${s}">SN-001</span><span th:unless="${iter.last}">, </span>
+                    </span>
+                </div>
+            </td>
+            <td class="text-end" th:text="${line.quantity}">1</td>
+            <td class="text-end" th:text="'LKR ' + ${line.priceAtSale}">0.00</td>
+            <td class="text-end" th:text="'LKR ' + ${line.subtotal}">0.00</td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr>
+            <th colspan="3" class="text-end">Total</th>
+            <th class="text-end" th:text="'LKR ' + ${sale.amount}">0.00</th>
+        </tr>
+        </tfoot>
+    </table>
+
+    <!-- UC-02 step 6a: if any line was sold despite a compatibility
+         conflict, the authorized reason is shown here as part of the
+         permanent record of the sale. -->
+    <div class="alert alert-info" th:each="line : ${lineItems}" th:if="${line.compatibilityOverrideReason != null}">
+        <strong th:text="${line.productName}">Product</strong> &mdash; compatibility override:
+        <span th:text="${line.compatibilityOverrideReason}"></span>
+    </div>
+
+    <!-- On-the-spot discount: if a line's price was manually lowered by
+         the Sales Executive (see CartService.updatePrice), the reason
+         is shown here as part of the permanent record of the sale. -->
+    <div class="alert alert-info" th:each="line : ${lineItems}" th:if="${line.discountReason != null}">
+        <strong th:text="${line.productName}">Product</strong> &mdash; price discount:
+        <span th:text="${line.discountReason}"></span>
+    </div>
+
+    <!-- Warehouse Pick Ticket intentionally not shown here - that's
+         internal staff information, not something a customer receipt
+         should display. A PickTicket row is still created at checkout
+         (see CheckoutService) - Function 1 (inventory) owns showing its
+         code/QR on their own screen once that package exists. -->
+</main>
+</body>
+</html>
