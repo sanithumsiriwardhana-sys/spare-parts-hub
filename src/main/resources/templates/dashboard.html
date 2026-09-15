@@ -5,11 +5,218 @@
 <body>
 <main>
     <h2>Welcome, <span sec:authentication="name"></span></h2>
-    <p class="text-muted">
-        Signed in as <span sec:authentication="principal.user.role"></span>.
-        This is a placeholder landing page - each function module can add
-        its own dashboard widget/card here once built.
-    </p>
+
+    <!-- Each function's widget goes in its own gated block below - only
+         show it to the roles who'd actually act on it, same pattern as
+         the navbar. Add yours as a new div, don't edit this one. -->
+    <div class="row g-3 mt-2" sec:authorize="hasAnyRole('INVENTORY_SUPERVISOR','ADMIN')">
+
+        <div class="col-md-3">
+            <div class="card h-100" th:classappend="${criticalCount > 0} ? 'border-danger' : ''">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Urgency Dashboard</h6>
+                    <p class="display-6 mb-1" th:text="${criticalCount}">0</p>
+                    <p class="text-muted small mb-2">item(s) at CRITICAL urgency</p>
+                    <a th:href="@{/stockmonitoring}" class="btn btn-sm btn-outline-primary">View dashboard</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100" th:classappend="${warningCount > 0} ? 'border-warning' : ''">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Warning Items</h6>
+                    <p class="display-6 mb-1" th:text="${warningCount}">0</p>
+                    <p class="text-muted small mb-2">approaching critical urgency</p>
+                    <a th:href="@{/stockmonitoring}" class="btn btn-sm btn-outline-secondary">View dashboard</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Restock Suggestions</h6>
+                    <p class="display-6 mb-1" th:text="${pendingRestockCount}">0</p>
+                    <p class="text-muted small mb-2">awaiting your decision</p>
+                    <a th:href="@{/stockmonitoring/restock-suggestions}" class="btn btn-sm btn-outline-secondary">Review</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Stock Requests</h6>
+                    <p class="display-6 mb-1" th:text="${pendingStockRequestCount}">0</p>
+                    <p class="text-muted small mb-2">customers waiting to be notified</p>
+                    <a th:href="@{/stockmonitoring/stock-requests}" class="btn btn-sm btn-outline-secondary">View</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 mt-1">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Stock by Category</h6>
+                    <div th:if="${#lists.isEmpty(categoryStockSummaries)}" class="text-muted small">
+                        No products found.
+                    </div>
+                    <table th:unless="${#lists.isEmpty(categoryStockSummaries)}" class="table table-sm mb-0">
+                        <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Total Stock</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${categoryStockSummaries}">
+                            <td th:text="${row.category}">Category</td>
+                            <td th:text="${row.totalStock}">0</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Function 2 - Sales / POS. "How's today going" snapshot for a
+         Sales Executive: today's transaction count, revenue, average
+         order value, plus an all-time top-sellers list. All four come
+         from one SalesDashboardStats object (SalesDashboardService) -
+         see that service's comment for how /dashboard should wire it in. -->
+    <div class="row g-3 mt-2" sec:authorize="hasAnyRole('SALES_EXEC','ADMIN')">
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Today's Sales</h6>
+                    <p class="display-6 mb-1" th:text="${salesStats.todaySalesCount}">0</p>
+                    <p class="text-muted small mb-2">transaction(s) so far today</p>
+                    <a th:href="@{/sales}" class="btn btn-sm btn-outline-primary">Open POS</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Today's Revenue</h6>
+                    <p class="display-6 mb-1" th:text="'LKR ' + ${salesStats.todaySalesTotal}">LKR 0.00</p>
+                    <p class="text-muted small mb-2">total sold today</p>
+                    <a th:href="@{/sales/history}" class="btn btn-sm btn-outline-secondary">Sales history</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Avg. Order Value</h6>
+                    <p class="display-6 mb-1" th:text="'LKR ' + ${salesStats.averageOrderValue}">LKR 0.00</p>
+                    <p class="text-muted small mb-2">per transaction today</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Top Sellers</h6>
+                    <div th:if="${#lists.isEmpty(salesStats.topSellers)}" class="text-muted small">
+                        No sales recorded yet.
+                    </div>
+                    <ol th:unless="${#lists.isEmpty(salesStats.topSellers)}" class="ps-3 mb-0 small">
+                        <li th:each="row : ${salesStats.topSellers}">
+                            <span th:text="${row.productName}">Product</span>
+                            <span class="text-muted" th:text="'(' + ${row.unitsSold} + ' sold)'">(0 sold)</span>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Charts row - Sales by Category (all-time) and Daily Revenue
+         Trend (last 30 days). Chart.js loaded via CDN, same pattern as
+         qrcodejs in sales/receipt.html - not a new Maven dependency. -->
+    <div class="row g-3 mt-2" sec:authorize="hasAnyRole('SALES_EXEC','ADMIN')" th:if="${salesStats != null}">
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Sales by Category</h6>
+                    <div th:if="${#lists.isEmpty(salesStats.categoryLabels)}" class="text-muted small">
+                        No sales recorded yet.
+                    </div>
+                    <canvas th:unless="${#lists.isEmpty(salesStats.categoryLabels)}" id="categoryChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Daily Revenue (Last 30 Days)</h6>
+                    <canvas id="trendChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+        <script th:inline="javascript">
+            (function () {
+                if (typeof Chart === 'undefined') {
+                    return; // CDN failed to load - leave the cards as-is rather than erroring
+                }
+
+                var categoryLabels = /*[[${salesStats.categoryLabels}]]*/ [];
+                var categoryRevenues = /*[[${salesStats.categoryRevenues}]]*/ [];
+                var trendLabels = /*[[${salesStats.trendLabels}]]*/ [];
+                var trendRevenues = /*[[${salesStats.trendRevenues}]]*/ [];
+
+                var categoryCanvas = document.getElementById('categoryChart');
+                if (categoryCanvas && categoryLabels.length > 0) {
+                    new Chart(categoryCanvas, {
+                        type: 'doughnut',
+                        data: {
+                            labels: categoryLabels,
+                            datasets: [{
+                                data: categoryRevenues,
+                                backgroundColor: ['#0d6efd', '#6610f2', '#d63384', '#fd7e14', '#198754', '#20c997', '#0dcaf0', '#ffc107']
+                            }]
+                        },
+                        options: {plugins: {legend: {position: 'bottom'}}}
+                    });
+                }
+
+                var trendCanvas = document.getElementById('trendChart');
+                if (trendCanvas) {
+                    new Chart(trendCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: trendLabels,
+                            datasets: [{
+                                label: 'Revenue (LKR)',
+                                data: trendRevenues,
+                                borderColor: '#0d6efd',
+                                backgroundColor: 'rgba(13,110,253,0.1)',
+                                tension: 0.3,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            plugins: {legend: {display: false}},
+                            scales: {x: {ticks: {maxTicksLimit: 8}}}
+                        }
+                    });
+                }
+            })();
+        </script>
+    </div>
 </main>
 </body>
 </html>
