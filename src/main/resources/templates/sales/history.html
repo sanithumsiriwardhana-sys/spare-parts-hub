@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Sales History', content=~{::main})}">
+<body>
+<main>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Sales History</h2>
+        <a th:href="@{/sales}" class="btn btn-outline-secondary btn-sm">Back to Sales</a>
+    </div>
+
+    <div th:if="${#lists.isEmpty(rows)}" class="alert alert-secondary">
+        No sales recorded yet.
+    </div>
+
+    <table th:unless="${#lists.isEmpty(rows)}" class="table table-hover align-middle">
+        <thead>
+        <tr>
+            <th>Sale Code</th>
+            <th>Date</th>
+            <th>Sold By</th>
+            <th class="text-end">Amount</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${rows}">
+            <td th:text="${row.saleCode}">SALE-000001</td>
+            <td th:text="${row.formattedDate}">24 Aug 2026, 10:41 AM</td>
+            <td th:text="${row.soldByName}">Name</td>
+            <td class="text-end" th:text="'LKR ' + ${row.amount}">0.00</td>
+            <td class="text-end">
+                <a th:href="@{'/sales/receipt/' + ${row.saleId}}" class="btn btn-sm btn-outline-primary">
+                    View Receipt
+                </a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

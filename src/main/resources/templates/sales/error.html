@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Something Went Wrong', content=~{::main})}">
+<body>
+<!--
+  Rendered by CheckoutController when history() or receipt() hits an
+  unexpected error - these are server-rendered MVC endpoints, not JSON
+  APIs, so a raw exception has nowhere else to go except Spring's
+  generic Whitelabel error page. This is the friendly stand-in for
+  that, in the same fragments/layout shell as every other sales page
+  so it doesn't look like the app broke entirely.
+-->
+<main>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Something Went Wrong</h2>
+    </div>
+
+    <div class="alert alert-danger" th:text="${message}">
+        This page could not be loaded right now. Please try again shortly.
+    </div>
+
+    <div class="d-flex gap-2">
+        <a th:href="@{/sales}" class="btn btn-primary btn-sm">Back to Sales</a>
+        <a th:href="@{/sales/history}" class="btn btn-outline-secondary btn-sm">Sales History</a>
+    </div>
+</main>
+</body>
+</html>
