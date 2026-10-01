@@ -1,59 +1,149 @@
 package com.sliit.sparepartshub.stockmonitoring.controller;
 
-import com.sliit.sparepartshub.entity.Product;
-import com.sliit.sparepartshub.stockmonitoring.dto.ProductUrgencyView;
-import com.sliit.sparepartshub.stockmonitoring.dto.UrgencyLevel;
-import com.sliit.sparepartshub.stockmonitoring.service.ProductDetailService;
-import com.sliit.sparepartshub.stockmonitoring.service.UrgencyScoreService;
+import com.sliit.sparepartshub.entity.RestockSuggestion;
+import com.sliit.sparepartshub.entity.StockRequest;
+import com.sliit.sparepartshub.security.CustomUserPrincipal;
+import com.sliit.sparepartshub.stockmonitoring.dto.UrgencyRow;
+import com.sliit.sparepartshub.stockmonitoring.service.StockMonitoringService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
-/**
- * Function 3 - Dynamic Urgency Score Tracking
- * Actor: Inventory Supervisor
- * Covers: SP2-06 (urgency dashboard, product detail drill-down per
- * UC-03 steps 7-8). Critical alerts (SP2-05), stock request logging
- * (PBI-11), and restock suggestion approval (PBI-12) live in their own
- * controllers.
- */
 @Controller
+@RequestMapping("/stockmonitoring")
 public class StockMonitoringController {
 
-    private final UrgencyScoreService urgencyScoreService;
-    private final ProductDetailService productDetailService;
+    private final StockMonitoringService service;
 
-    public StockMonitoringController(UrgencyScoreService urgencyScoreService,
-                                     ProductDetailService productDetailService) {
-        this.urgencyScoreService = urgencyScoreService;
-        this.productDetailService = productDetailService;
+    public StockMonitoringController(StockMonitoringService service) {
+        this.service = service;
     }
 
-    @GetMapping("/stockmonitoring")
-    public String dashboard(Model model) {
-        List<Product> products = urgencyScoreService.getDashboardOrderedByUrgency();
-
-        List<ProductUrgencyView> rows = products.stream()
-                .map(p -> new ProductUrgencyView(p, urgencyScoreService.classify(p.getUrgencyScore())))
-                .toList();
-
-        // Reuses the same classify() call already done above - just a
-        // filtered view, not a separate calculation (SP2-05).
-        List<ProductUrgencyView> criticalItems = rows.stream()
-                .filter(row -> row.getLevel() == UrgencyLevel.CRITICAL)
-                .toList();
+    @GetMapping
+    public String index(Model model) {
+        List<UrgencyRow> rows = service.dashboardRows();
+        List<RestockSuggestion> suggestions = service.suggestions();
 
         model.addAttribute("rows", rows);
-        model.addAttribute("criticalItems", criticalItems);
+        model.addAttribute("suggestions", suggestions);
+        model.addAttribute("criticalCount", rows.stream()
+                .filter(row -> "Critical".equals(row.getClassification()))
+                .count());
+        model.addAttribute("warningCount", rows.stream()
+                .filter(row -> "Warning".equals(row.getClassification()))
+                .count());
+        model.addAttribute("pendingSuggestionCount", suggestions.stream()
+                .filter(suggestion -> suggestion.getStatus() == RestockSuggestion.Status.pending)
+                .count());
+        model.addAttribute("lastRecalculatedAt", service.getLastRecalculatedAt());
+
         return "stockmonitoring/index";
     }
 
-    @GetMapping("/stockmonitoring/products/{id}")
-    public String productDetail(@PathVariable("id") Integer productId, Model model) {
-        model.addAttribute("detail", productDetailService.getDetail(productId));
-        return "stockmonitoring/product-detail";
+    @PostMapping("/recalculate")
+    public String recalculate(@AuthenticationPrincipal CustomUserPrincipal principal,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            service.recalculateAll(principal.getUser());
+            redirectAttributes.addFlashAttribute(
+                    "success",
+                    "Urgency scores recalculated from current stock, sales, customer demand and incoming purchase orders."
+            );
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/stockmonitoring";
+    }
+
+    @PostMapping("/suggestions/{id}")
+    public String decide(@PathVariable Integer id,
+                         @RequestParam RestockSuggestion.Status status,
+                         @RequestParam(required = false) Integer quantity,
+                         @RequestParam(required = false) String reason,
+                         @AuthenticationPrincipal CustomUserPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            service.decide(
+                    id,
+                    status,
+                    quantity,
+                    reason,
+                    principal.getUser()
+            );
+            redirectAttributes.addFlashAttribute(
+                    "success",
+                    "Restock suggestion " + status.name().replace('_', ' ') + "."
+            );
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/stockmonitoring";
+    }
+
+    @GetMapping("/stock-requests")
+    public String requests(Model model) {
+        List<StockRequest> requestRows = service.stockRequests();
+        model.addAttribute("requests", requestRows);
+        model.addAttribute("products", service.products());
+        model.addAttribute("readyCount", requestRows.stream()
+                .filter(request -> request.getStatus() == StockRequest.Status.ready_to_notify)
+                .count());
+        model.addAttribute("pendingCount", requestRows.stream()
+                .filter(request -> request.getStatus() == StockRequest.Status.pending)
+                .count());
+        return "stockmonitoring/stock-requests";
+    }
+
+    @PostMapping("/stock-requests")
+    public String create(@RequestParam Integer productId,
+                         @RequestParam Integer requestedQuantity,
+                         @RequestParam String customerName,
+                         @RequestParam(required = false) String customerEmail,
+                         @RequestParam(required = false) String customerPhonenum,
+                         @AuthenticationPrincipal CustomUserPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            StockRequest created = service.createRequest(
+                    productId,
+                    requestedQuantity,
+                    customerName,
+                    customerEmail,
+                    customerPhonenum,
+                    principal.getUser()
+            );
+
+            String message = created.getStatus() == StockRequest.Status.ready_to_notify
+                    ? "Customer stock request logged. Stock is already available, so it is Ready to Notify."
+                    : "Customer stock request logged and is waiting for stock.";
+            redirectAttributes.addFlashAttribute("success", message);
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/stockmonitoring/stock-requests";
+    }
+
+    @PostMapping("/stock-requests/{id}/status")
+    public String status(@PathVariable Integer id,
+                         @RequestParam StockRequest.Status status,
+                         @AuthenticationPrincipal CustomUserPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            service.markRequest(id, status, principal.getUser());
+            redirectAttributes.addFlashAttribute(
+                    "success",
+                    "Stock request updated to " + status.name().replace('_', ' ') + "."
+            );
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/stockmonitoring/stock-requests";
     }
 }
