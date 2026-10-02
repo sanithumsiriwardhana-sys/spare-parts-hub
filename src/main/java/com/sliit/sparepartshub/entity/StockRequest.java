@@ -4,16 +4,21 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-/**
- * Logs a customer's interest in an out-of-stock item so staff can notify
- * them once it's back (Function 3 - demand tracking sub-function).
- */
 @Entity
 @Table(name = "stock_request")
 public class StockRequest {
 
+    /**
+     * pending          - demand exists but enough stock is not yet available
+     * ready_to_notify  - stock is available; staff still needs to contact the customer
+     * notified         - staff has actually contacted the customer
+     * fulfilled        - the request is complete
+     */
     public enum Status {
-        pending, notified, fulfilled
+        pending,
+        ready_to_notify,
+        notified,
+        fulfilled
     }
 
     @Id
@@ -28,6 +33,9 @@ public class StockRequest {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "logged_by", nullable = false)
     private User loggedBy;
+
+    @Column(name = "requested_quantity", nullable = false)
+    private Integer requestedQuantity = 1;
 
     @Column(name = "customer_name", nullable = false, length = 50)
     private String customerName;
@@ -73,6 +81,14 @@ public class StockRequest {
 
     public void setLoggedBy(User loggedBy) {
         this.loggedBy = loggedBy;
+    }
+
+    public Integer getRequestedQuantity() {
+        return requestedQuantity;
+    }
+
+    public void setRequestedQuantity(Integer requestedQuantity) {
+        this.requestedQuantity = requestedQuantity;
     }
 
     public String getCustomerName() {
