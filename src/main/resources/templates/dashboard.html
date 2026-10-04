@@ -5,11 +5,82 @@
 <body>
 <main>
     <h2>Welcome, <span sec:authentication="name"></span></h2>
-    <p class="text-muted">
-        Signed in as <span sec:authentication="principal.user.role"></span>.
-        This is a placeholder landing page - each function module can add
-        its own dashboard widget/card here once built.
-    </p>
+
+    <!-- Each function's widget goes in its own gated block below - only
+         show it to the roles who'd actually act on it, same pattern as
+         the navbar. Add yours as a new div, don't edit this one. -->
+    <div class="row g-3 mt-2" sec:authorize="hasAnyRole('INVENTORY_SUPERVISOR','ADMIN')">
+
+        <div class="col-md-3">
+            <div class="card h-100" th:classappend="${criticalCount > 0} ? 'border-danger' : ''">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Urgency Dashboard</h6>
+                    <p class="display-6 mb-1" th:text="${criticalCount}">0</p>
+                    <p class="text-muted small mb-2">item(s) at CRITICAL urgency</p>
+                    <a th:href="@{/stockmonitoring}" class="btn btn-sm btn-outline-primary">View dashboard</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100" th:classappend="${warningCount > 0} ? 'border-warning' : ''">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Warning Items</h6>
+                    <p class="display-6 mb-1" th:text="${warningCount}">0</p>
+                    <p class="text-muted small mb-2">approaching critical urgency</p>
+                    <a th:href="@{/stockmonitoring}" class="btn btn-sm btn-outline-secondary">View dashboard</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Restock Suggestions</h6>
+                    <p class="display-6 mb-1" th:text="${pendingRestockCount}">0</p>
+                    <p class="text-muted small mb-2">awaiting your decision</p>
+                    <a th:href="@{/stockmonitoring/restock-suggestions}" class="btn btn-sm btn-outline-secondary">Review</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Stock Requests</h6>
+                    <p class="display-6 mb-1" th:text="${pendingStockRequestCount}">0</p>
+                    <p class="text-muted small mb-2">customers waiting to be notified</p>
+                    <a th:href="@{/stockmonitoring/stock-requests}" class="btn btn-sm btn-outline-secondary">View</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 mt-1">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Stock by Category</h6>
+                    <div th:if="${#lists.isEmpty(categoryStockSummaries)}" class="text-muted small">
+                        No products found.
+                    </div>
+                    <table th:unless="${#lists.isEmpty(categoryStockSummaries)}" class="table table-sm mb-0">
+                        <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Total Stock</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${categoryStockSummaries}">
+                            <td th:text="${row.category}">Category</td>
+                            <td th:text="${row.totalStock}">0</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </main>
 </body>
 </html>
