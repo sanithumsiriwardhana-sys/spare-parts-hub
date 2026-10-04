@@ -1,11 +1,7 @@
 package com.sliit.sparepartshub.warranty.controller;
 
 import com.sliit.sparepartshub.entity.RmaClaim;
-import com.sliit.sparepartshub.entity.SerialNumber;
 import com.sliit.sparepartshub.security.CustomUserPrincipal;
-import com.sliit.sparepartshub.warranty.dto.RmaClaimCreateRequest;
-import com.sliit.sparepartshub.warranty.dto.WarrantyDashboardMetrics;
-import com.sliit.sparepartshub.warranty.dto.WarrantyValidationResult;
 import com.sliit.sparepartshub.warranty.service.WarrantyService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -13,165 +9,176 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
-
-/**
- * Function 4 - Warranty and Returns Management
- * Actor: Operations Coordinator (and Admin)
- * Covers: PBI-13 to PBI-16 (Sprint 3)
- */
 @Controller
 @RequestMapping("/warranty")
 public class WarrantyController {
 
-    private final WarrantyService warrantyService;
+    private final WarrantyService service;
 
-    public WarrantyController(WarrantyService warrantyService) {
-        this.warrantyService = warrantyService;
+    public WarrantyController(WarrantyService service) {
+        this.service = service;
     }
 
-    /**
-     * Dashboard view: KPIs, quick serial search, and filterable RMA claims list (PBI-16).
-     */
     @GetMapping
-    public String index(@RequestParam(required = false) RmaClaim.Resolution resolution,
-                        @RequestParam(required = false) String search,
+    public String index(@RequestParam(required = false) String serial,
+                        @RequestParam(required = false) RmaClaim.ClaimStatus status,
                         Model model) {
-        WarrantyDashboardMetrics metrics = warrantyService.getDashboardMetrics();
-        List<RmaClaim> claims = warrantyService.searchClaims(resolution, search);
+        populateDashboard(model, status);
+        model.addAttribute("selectedStatus", status);
 
-        model.addAttribute("metrics", metrics);
-        model.addAttribute("claims", claims);
-        model.addAttribute("selectedResolution", resolution);
-        model.addAttribute("search", search);
-        model.addAttribute("resolutions", RmaClaim.Resolution.values());
+        if (serial != null && !serial.isBlank()) {
+            try {
+                var lookup = service.lookup(serial);
+                model.addAttribute("lookup", lookup);
+                model.addAttribute("history", service.history(lookup.getSerial().getSerialId()));
+            } catch (IllegalArgumentException ex) {
+                model.addAttribute("error", ex.getMessage());
+            }
+        }
         return "warranty/index";
     }
 
-    /**
-     * Serial number scanner and warranty coverage verification (PBI-13, PBI-14).
-     */
     @GetMapping("/lookup")
-    public String lookup(@RequestParam(required = false) String serialValue, Model model) {
-        if (serialValue != null && !serialValue.trim().isEmpty()) {
-            WarrantyValidationResult result = warrantyService.validateWarranty(serialValue.trim());
-            model.addAttribute("result", result);
-            model.addAttribute("serialValue", serialValue.trim());
-        }
-        return "warranty/lookup";
+    public String lookup(@RequestParam String serial, RedirectAttributes redirectAttributes) {
+        redirectAttributes.addAttribute("serial", serial);
+        return "redirect:/warranty";
     }
 
-    /**
-     * Display the form to log a new RMA claim for an inspected serial (PBI-15).
-     */
-    @GetMapping("/claims/new")
-    public String showCreateClaimForm(@RequestParam Integer serialId,
-                                      RedirectAttributes redirectAttributes) {
-        var serialOpt = warrantyService.getSerialById(serialId);
-        if (serialOpt.isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "Serial number not found.");
-            return "redirect:/warranty/lookup";
+    @GetMapping("/rmas")
+    public String list(@RequestParam(required = false) RmaClaim.ClaimStatus status,
+                       RedirectAttributes redirectAttributes) {
+        if (status != null) {
+            redirectAttributes.addAttribute("status", status.name());
         }
-        return "redirect:/warranty/claims/create?serialValue=" + serialOpt.get().getSerialValue();
+        return "redirect:/warranty";
     }
 
-    /**
-     * Overloaded helper: Initiate claim creation directly from verified serial value.
-     */
-    @GetMapping("/claims/create")
-    public String prepareClaimForm(@RequestParam String serialValue,
-                                   Model model,
-                                   RedirectAttributes redirectAttributes) {
-        if (serialValue == null || serialValue.trim().isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "Please provide a valid serial number.");
-            return "redirect:/warranty/lookup";
+    @GetMapping("/rmas/{id}")
+    public String details(@PathVariable Integer id, Model model) {
+        try {
+            var claim = service.getClaim(id);
+            model.addAttribute("claim", claim);
+            model.addAttribute("history", service.history(claim.getSerial().getSerialId()));
+            model.addAttribute("replacementOptions", service.replacementOptions(id));
+            if (claim.getSerial().getSale() != null
+                    && claim.getSerial().getSale().getSoldAt() != null
+                    && claim.getSerial().getProduct().getWarrantyPeriodMonths() != null
+                    && claim.getSerial().getProduct().getWarrantyPeriodMonths() > 0) {
+                model.addAttribute(
+                        "warrantyExpiry",
+                        claim.getSerial().getSale().getSoldAt().toLocalDate()
+                                .plusMonths(claim.getSerial().getProduct().getWarrantyPeriodMonths())
+                );
+            }
+            return "warranty/rma-details";
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("error", ex.getMessage());
+            populateDashboard(model, null);
+            return "warranty/index";
         }
-
-        WarrantyValidationResult validation = warrantyService.validateWarranty(serialValue.trim());
-        if (validation.getStatus() == WarrantyValidationResult.CoverageStatus.NOT_FOUND) {
-            redirectAttributes.addFlashAttribute("error", "Serial number '" + serialValue + "' was not found.");
-            return "redirect:/warranty/lookup";
-        }
-
-        RmaClaimCreateRequest claimRequest = new RmaClaimCreateRequest();
-        claimRequest.setSerialId(validation.getSerialNumber().getSerialId());
-        claimRequest.setResolution(RmaClaim.Resolution.pending);
-
-        model.addAttribute("validation", validation);
-        model.addAttribute("serial", validation.getSerialNumber());
-        model.addAttribute("claimRequest", claimRequest);
-        model.addAttribute("resolutions", RmaClaim.Resolution.values());
-        return "warranty/create-claim";
     }
 
-    /**
-     * Save new RMA claim (PBI-15, UC-04 step 5).
-     */
     @PostMapping("/claims")
-    public String createClaim(@ModelAttribute RmaClaimCreateRequest claimRequest,
-                              @AuthenticationPrincipal CustomUserPrincipal principal,
-                              RedirectAttributes redirectAttributes) {
+    public String create(@RequestParam String serialValue,
+                         @RequestParam String faultDescription,
+                         @RequestParam(required = false) String conditionNotes,
+                         @AuthenticationPrincipal CustomUserPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
         try {
-            RmaClaim savedClaim = warrantyService.createClaim(claimRequest, principal.getUser());
-            redirectAttributes.addFlashAttribute("message", "RMA Claim " + savedClaim.getClaimCode() + " logged successfully.");
-            return "redirect:/warranty/claims/" + savedClaim.getClaimId();
-        } catch (RuntimeException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
-            return "redirect:/warranty/lookup";
-        }
-    }
-
-    /**
-     * Detailed view of a single RMA claim with resolution update actions (PBI-15, PBI-16).
-     */
-    @GetMapping("/claims/{id}")
-    public String claimDetail(@PathVariable Integer id, Model model) {
-        RmaClaim claim = warrantyService.getClaimById(id)
-                .orElseThrow(() -> new IllegalArgumentException("RMA Claim not found with ID: " + id));
-
-        // Also fetch any other claims for the same serial unit
-        List<RmaClaim> serialHistory = warrantyService.getClaimsForSerial(claim.getSerial().getSerialId());
-
-        model.addAttribute("claim", claim);
-        model.addAttribute("serialHistory", serialHistory);
-        model.addAttribute("resolutions", RmaClaim.Resolution.values());
-        return "warranty/claim-detail";
-    }
-
-    /**
-     * Update resolution status of an existing claim (PBI-15).
-     */
-    @PostMapping("/claims/{id}/resolve")
-    public String updateResolution(@PathVariable Integer id,
-                                   @RequestParam RmaClaim.Resolution resolution,
-                                   @RequestParam(required = false) String additionalNotes,
-                                   @AuthenticationPrincipal CustomUserPrincipal principal,
-                                   RedirectAttributes redirectAttributes) {
-        try {
-            warrantyService.updateResolution(id, resolution, additionalNotes, principal.getUser());
-            redirectAttributes.addFlashAttribute("message", "Claim resolution updated to " + resolution + ".");
-        } catch (RuntimeException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
-        }
-        return "redirect:/warranty/claims/" + id;
-    }
-
-    /**
-     * View complete lifecycle & RMA history of a serial number (PBI-16).
-     */
-    @GetMapping("/serials/{serialValue}/history")
-    public String serialHistory(@PathVariable String serialValue, Model model, RedirectAttributes redirectAttributes) {
-        var serialOpt = warrantyService.getSerialByValue(serialValue);
-        if (serialOpt.isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "Serial number not found: " + serialValue);
+            var claim = service.create(
+                    serialValue,
+                    faultDescription,
+                    conditionNotes,
+                    principal.getUser()
+            );
+            redirectAttributes.addFlashAttribute("success",
+                    "RMA " + claim.getClaimCode() + " created and is awaiting review.");
+            return "redirect:/warranty/rmas/" + claim.getClaimId();
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+            redirectAttributes.addAttribute("serial", serialValue);
             return "redirect:/warranty";
         }
+    }
 
-        SerialNumber serial = serialOpt.get();
-        List<RmaClaim> claims = warrantyService.getClaimsForSerial(serial.getSerialId());
+    @PostMapping("/rmas/{id}/approve")
+    public String approve(@PathVariable Integer id,
+                          @AuthenticationPrincipal CustomUserPrincipal principal,
+                          RedirectAttributes redirectAttributes) {
+        try {
+            service.approve(id, principal.getUser());
+            redirectAttributes.addFlashAttribute("success", "RMA approved. Select a final resolution.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/warranty/rmas/" + id;
+    }
 
-        model.addAttribute("serial", serial);
-        model.addAttribute("claims", claims);
-        return "warranty/serial-history";
+    @PostMapping("/rmas/{id}/reject")
+    public String reject(@PathVariable Integer id,
+                         @RequestParam String rejectionReason,
+                         @AuthenticationPrincipal CustomUserPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            service.reject(id, rejectionReason, principal.getUser());
+            redirectAttributes.addFlashAttribute("success", "RMA rejected. No inventory stock was changed.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/warranty/rmas/" + id;
+    }
+
+    @PostMapping("/rmas/{id}/replace")
+    public String replace(@PathVariable Integer id,
+                          @RequestParam Integer replacementSerialId,
+                          @RequestParam(required = false) String resolutionNotes,
+                          @RequestParam(defaultValue = "false") boolean confirm,
+                          @AuthenticationPrincipal CustomUserPrincipal principal,
+                          RedirectAttributes redirectAttributes) {
+        try {
+            service.replace(id, replacementSerialId, resolutionNotes, confirm, principal.getUser());
+            redirectAttributes.addFlashAttribute("success",
+                    "Replacement completed. Sellable stock was reduced exactly once.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/warranty/rmas/" + id;
+    }
+
+    @PostMapping("/rmas/{id}/refund")
+    public String refund(@PathVariable Integer id,
+                         @RequestParam(required = false) String resolutionNotes,
+                         @RequestParam(defaultValue = "false") boolean confirm,
+                         @AuthenticationPrincipal CustomUserPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            service.refund(id, resolutionNotes, confirm, principal.getUser());
+            redirectAttributes.addFlashAttribute("success", "RMA recorded as refunded.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/warranty/rmas/" + id;
+    }
+
+    @PostMapping("/rmas/{id}/manufacturer")
+    public String manufacturer(@PathVariable Integer id,
+                               @RequestParam(required = false) String resolutionNotes,
+                               @RequestParam(defaultValue = "false") boolean confirm,
+                               @AuthenticationPrincipal CustomUserPrincipal principal,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            service.sendToManufacturer(id, resolutionNotes, confirm, principal.getUser());
+            redirectAttributes.addFlashAttribute("success", "RMA recorded as sent to manufacturer.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/warranty/rmas/" + id;
+    }
+
+    private void populateDashboard(Model model, RmaClaim.ClaimStatus status) {
+        model.addAttribute("pendingCount", service.pendingCount());
+        model.addAttribute("approvedCount", service.approvedCount());
+        model.addAttribute("todayCount", service.todayCount());
+        model.addAttribute("claims", service.claims(status));
     }
 }
