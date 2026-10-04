@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{fragments/layout :: page(title='Supplier Management', content=~{::main})}">
 <body>
-<main class="supplier-page">
+<main class="supplier-page module-supplier">
     <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
     <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
 
@@ -19,66 +19,28 @@
 
     <th:block th:replace="~{supplier/_fragments :: subnav('dashboard')}"></th:block>
 
-    <section class="supplier-shell" aria-label="Supplier Management overview">
-        <div class="row g-3 mb-4">
-            <div class="col-sm-6 col-xl-3">
-                <div class="metric-card metric-blue">
-                    <div class="d-flex align-items-start justify-content-between gap-3">
-                        <div>
-                            <div class="metric-label">Suppliers</div>
-                            <div class="metric-value" th:text="${supplierCount}">0</div>
-                            <div class="metric-note">Active suppliers</div>
-                        </div>
-                        <span class="metric-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-                <div class="metric-card metric-amber">
-                    <div class="d-flex align-items-start justify-content-between gap-3">
-                        <div>
-                            <div class="metric-label">Pending Partnerships</div>
-                            <div class="metric-value" th:text="${partnershipCount}">0</div>
-                            <div class="metric-note">Awaiting review</div>
-                        </div>
-                        <span class="metric-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 11 3 6l3-3 5 5M16 11l5-5-3-3-5 5"/><path d="m8 11 3 3a2 2 0 0 0 3 0l2-2M5 8l-2 7 4 4 3-1M19 8l2 7-4 4-3-1"/></svg>
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-                <div class="metric-card metric-green">
-                    <div class="d-flex align-items-start justify-content-between gap-3">
-                        <div>
-                            <div class="metric-label">Ready to Order</div>
-                            <div class="metric-value" th:text="${restockCount}">0</div>
-                            <div class="metric-note">Approved requirements</div>
-                        </div>
-                        <span class="metric-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m21 8-9 5-9-5"/><path d="M3 8l9-5 9 5v8l-9 5-9-5V8Z"/><path d="M12 13v8"/></svg>
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-                <div class="metric-card metric-purple">
-                    <div class="d-flex align-items-start justify-content-between gap-3">
-                        <div>
-                            <div class="metric-label">Open Purchase Orders</div>
-                            <div class="metric-value" th:text="${poCount}">0</div>
-                            <div class="metric-note">Current purchase orders</div>
-                        </div>
-                        <span class="metric-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
-                        </span>
-                    </div>
-                </div>
-            </div>
+    <section class="kpi-orbit-panel kpi-orbit-panel--supplier" aria-labelledby="supplier-orbit-title">
+        <div class="kpi-orbit-panel__copy">
+            <div class="kpi-orbit-kicker">Procurement network</div>
+            <h2 id="supplier-orbit-title" class="kpi-orbit-title">Supplier Network</h2>
+            <p>Supplier coverage, partnership review, approved restock work and open purchase orders in one procurement visual.</p>
+            <div class="kpi-orbit-caption"><span class="kpi-orbit-live-dot"></span> Procurement workspace connected</div>
         </div>
+        <div class="kpi-orbit kpi-orbit--supplier" data-kpi-orbit aria-label="Supplier Management KPI orbit">
+            <div class="kpi-orbit__rings" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="kpi-orbit__core">
+                <span class="kpi-orbit__core-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20a5.5 5.5 0 0 1 11 0M13 20a4 4 0 0 1 8 0"/></svg></span>
+                <strong>Network</strong><small>Procurement core</small>
+            </div>
+            <div class="kpi-orbit__metric kpi-orbit__metric--a"><strong class="kpi-orbit__value" th:text="${supplierCount}">0</strong><span>Active Suppliers</span></div>
+            <div class="kpi-orbit__metric kpi-orbit__metric--b kpi-orbit__metric--alert"><strong class="kpi-orbit__value" th:text="${partnershipCount}">0</strong><span>Partnership Review</span></div>
+            <div class="kpi-orbit__metric kpi-orbit__metric--c"><strong class="kpi-orbit__value" th:text="${restockCount}">0</strong><span>Ready to Order</span></div>
+            <div class="kpi-orbit__metric kpi-orbit__metric--d"><strong class="kpi-orbit__value" th:text="${poCount}">0</strong><span>Open POs</span></div>
+            <div class="kpi-orbit__status"><span class="kpi-orbit-live-dot"></span><span><strong>Procurement live</strong><small>Supplier-to-receipt flow</small></span></div>
+        </div>
+    </section>
 
+    <section class="supplier-shell" aria-label="Supplier Management overview">
         <div class="panel-card">
             <div class="panel-header">
                 <div>
