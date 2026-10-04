@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{fragments/layout :: page(title='Receive Supplier Shipment', content=~{::main})}">
 <body>
-<main class="supplier-page">
+<main class="supplier-page module-supplier">
     <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
     <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
 
@@ -24,7 +24,7 @@
                     <div class="receipt-item-head d-flex flex-column flex-md-row justify-content-between gap-2">
                         <div>
                             <div class="fw-bold" th:text="${item.product.name}">Product</div>
-                            <div class="small text-muted">Ordered: <strong th:text="${item.quantityOrdered}">10</strong><span> · </span>Current stock: <strong th:text="${item.product.stockCount}">0</strong></div>
+                            <div class="small text-muted">Ordered: <strong th:text="${item.quantityOrdered}">10</strong><span> · </span>Already received: <strong th:text="${item.receivedQuantity}">0</strong><span> · </span>Remaining: <strong th:text="${item.quantityOrdered - item.receivedQuantity}">0</strong><span> · </span>Current stock: <strong th:text="${item.product.stockCount}">0</strong></div>
                         </div>
                         <span class="code-chip" th:text="${item.product.productCode != null ? item.product.productCode : 'Product #' + item.product.productId}">PRD-001</span>
                     </div>
@@ -36,7 +36,7 @@
                                 <div class="col-md-4">
                                     <label class="form-label" th:for="${'acceptedQuantity-' + item.poItemId}">Accepted Quantity <span class="text-danger">*</span></label>
                                     <input class="form-control" th:id="${'acceptedQuantity-' + item.poItemId}" name="acceptedQuantity"
-                                           type="number" min="0" th:max="${item.quantityOrdered}" th:value="${item.quantityOrdered}" required/>
+                                           type="number" min="0" th:max="${item.quantityOrdered - item.receivedQuantity}" th:value="${item.quantityOrdered - item.receivedQuantity}" required/>
                                     <div class="form-text">Only units physically accepted into inventory.</div>
                                 </div>
                                 <div class="col-md-8">
