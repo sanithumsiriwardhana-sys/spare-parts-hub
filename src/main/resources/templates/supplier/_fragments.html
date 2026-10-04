@@ -77,6 +77,14 @@
 
         <li class="nav-item">
             <a class="nav-link"
+               th:classappend="${active == 'offers'} ? ' active' : ''"
+               th:href="@{/supplier/offers}">
+                Supplier Offers
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link"
                th:classappend="${active == 'restock'} ? ' active' : ''"
                th:href="@{/supplier/restock-requirements}">
                 Restock Requirements
