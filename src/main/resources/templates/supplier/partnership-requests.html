@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{fragments/layout :: page(title='Partnership Requests', content=~{::main})}">
 <body>
-<main class="supplier-page">
+<main class="supplier-page module-supplier">
     <th:block th:replace="~{supplier/_fragments :: assets}"></th:block>
     <th:block th:replace="~{supplier/_fragments :: alerts}"></th:block>
 
@@ -36,8 +36,9 @@
                 <tr th:each="request : ${requests}" data-search-row>
                     <td>
                         <div class="fw-bold" th:text="${request.companyName}">Company</div>
-                        <div th:if="${request.catalogFilePath != null and !#strings.isEmpty(request.catalogFilePath)}" class="text-muted small mt-1">
-                            Catalog: <span th:text="${request.catalogFilePath}">catalog.pdf</span>
+                        <div class="text-muted small mt-1" th:if="${request.supplier != null}">Portal account: <span th:text="${request.supplier.supplierCode}">SUP001</span></div>
+                        <div th:if="${request.catalogFilePath != null and !#strings.isEmpty(request.catalogFilePath)}" class="mt-2">
+                            <a class="btn btn-sm btn-outline-primary" th:href="@{/supplier/partnerships/{id}/catalog(id=${request.requestId})}">Download Catalog</a>
                         </div>
                     </td>
                     <td th:text="${request.contactPerson}">Contact Person</td>
@@ -45,7 +46,19 @@
                     <td class="small text-muted" th:text="${request.submittedAt != null ? request.submittedAt : '—'}">—</td>
                     <td><span th:class="${'status-pill status-' + request.status}" th:text="${request.status}">pending</span></td>
                     <td class="text-end no-print">
-                        <div th:if="${request.status.name() == 'pending'}" class="d-flex justify-content-end gap-2">
+                        <div th:if="${request.status.name() == 'pending'}"
+                             class="d-flex flex-wrap justify-content-end gap-2">
+                            <form th:if="${request.catalogFilePath != null and !#strings.isEmpty(request.catalogFilePath)}"
+                                  th:action="@{/supplier/partnerships/{id}/catalog/delete(id=${request.requestId})}"
+                                  method="post"
+                                  data-confirm="Remove the uploaded catalogue from this pending request?">
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">Remove Catalogue</button>
+                            </form>
+                            <form th:action="@{/supplier/partnerships/{id}/withdraw(id=${request.requestId})}"
+                                  method="post"
+                                  data-confirm="Withdraw this pending partnership request? The request and its uploaded catalogue will be removed.">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">Withdraw</button>
+                            </form>
                             <form th:action="@{/supplier/partnerships/{id}/decision(id=${request.requestId})}" method="post"
                                   data-confirm="Approve this partnership request? This records the decision but does not create a portal password.">
                                 <input type="hidden" name="decision" value="approved"/>
@@ -57,7 +70,12 @@
                                 <button class="btn btn-sm btn-outline-danger" type="submit">Reject</button>
                             </form>
                         </div>
-                        <span th:unless="${request.status.name() == 'pending'}" class="text-muted small">Decision recorded</span>
+                        <div th:unless="${request.status.name() == 'pending'}" class="d-flex justify-content-end align-items-center gap-2">
+                            <a th:if="${request.status.name() == 'approved' and request.supplier != null}"
+                               class="btn btn-sm btn-primary"
+                               th:href="@{/supplier/records/{id}/products(id=${request.supplier.supplierId})}">Manage Products</a>
+                            <span class="text-muted small">Decision recorded</span>
+                        </div>
                     </td>
                 </tr>
                 </tbody>
