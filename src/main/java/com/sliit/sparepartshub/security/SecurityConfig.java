@@ -11,14 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Route protection is scoped by URL prefix, one prefix per function
- * package (see the /inventory, /sales, /stockmonitoring, /warranty,
- * /supplier, /reporting packages). Admin can reach everything since the
- * Shop Owner/Admin role oversees the whole system per the proposal.
+ * Security configuration for internal staff users.
  *
- * Update the requestMatchers below as each member builds out their
- * controllers - these paths are placeholders matching the six function
- * packages, not final routes.
+ * Supplier portal authentication is intentionally handled separately by
+ * reporting.security.SupplierSecurityConfig.
  */
 @Configuration
 @EnableWebSecurity
@@ -32,57 +28,111 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Matches password_hash VARCHAR(60) in the schema - that column
-        // width is sized specifically for BCrypt hashes.
         return new BCryptPasswordEncoder();
     }
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        // Spring Security 6.3+ removed the no-arg constructor + setUserDetailsService()
-        // pattern - UserDetailsService is now passed directly into the constructor.
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider(userDetailsService);
+
         provider.setPasswordEncoder(passwordEncoder());
+
         return provider;
     }
 
-    // @Order(2): SupplierSecurityConfig's chain is @Order(1) and scoped
-    // to /supplier-portal/**, so it's checked first. This chain (implicit
-    // "/**" matcher) handles everything else - Spring Security requires
-    // an explicit order whenever more than one SecurityFilterChain bean
-    // exists, or startup fails with an ambiguous-bean error.
+    /**
+     * Internal staff security chain.
+     *
+     * SupplierSecurityConfig uses @Order(1) for /supplier-portal/**.
+     * This chain therefore uses @Order(2).
+     */
     @Bean
     @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
                 .authenticationProvider(authenticationProvider())
+
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/css/**", "/js/**", "/webjars/**").permitAll()
-                        .requestMatchers("/inventory/**").hasAnyRole("WAREHOUSE_CLERK", "SALES_EXEC", "ADMIN")
-                        .requestMatchers("/sales/**").hasAnyRole("SALES_EXEC", "ADMIN")
-                        // More specific than /stockmonitoring/** below, so it must
-                        // come first - Spring Security uses the first matching
-                        // rule, not the most specific one. Sales Executive is the
-                        // one actually talking to customers about out-of-stock
-                        // items, even though the rest of this module (the urgency
-                        // dashboard itself) is Supervisor/Admin only.
-                        .requestMatchers("/stockmonitoring/stock-requests/**").hasAnyRole("SALES_EXEC", "INVENTORY_SUPERVISOR", "ADMIN")
-                        .requestMatchers("/stockmonitoring/**").hasAnyRole("INVENTORY_SUPERVISOR", "ADMIN")
-                        .requestMatchers("/warranty/**").hasAnyRole("OPERATIONS_COORDINATOR", "ADMIN")
-                        .requestMatchers("/supplier/**", "/reporting/**").hasRole("ADMIN")
-                        .anyRequest().authenticated()
+
+                        // Public/static resources
+                        .requestMatchers(
+                                "/",
+                                "/login",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/webjars/**"
+                        ).permitAll()
+
+                        // Function 1 - Inventory Storage Location Tracking
+                        .requestMatchers("/inventory/**")
+                        .hasAnyRole(
+                                "WAREHOUSE_CLERK",
+                                "SALES_EXEC",
+                                "ADMIN"
+                        )
+
+                        // Function 2 - Sales / POS
+                        .requestMatchers("/sales/**")
+                        .hasAnyRole(
+                                "SALES_EXEC",
+                                "ADMIN"
+                        )
+
+                        /*
+                         * More specific stock-request rule must come before
+                         * /stockmonitoring/** because Spring Security evaluates
+                         * requestMatchers from top to bottom.
+                         */
+                        .requestMatchers("/stockmonitoring/stock-requests/**")
+                        .hasAnyRole(
+                                "SALES_EXEC",
+                                "INVENTORY_SUPERVISOR",
+                                "ADMIN"
+                        )
+
+                        // Function 3 - Urgency / Stock Monitoring
+                        .requestMatchers("/stockmonitoring/**")
+                        .hasAnyRole(
+                                "INVENTORY_SUPERVISOR",
+                                "ADMIN"
+                        )
+
+                        // Function 4 - Warranty / RMA
+                        .requestMatchers("/warranty/**")
+                        .hasAnyRole(
+                                "OPERATIONS_COORDINATOR",
+                                "ADMIN"
+                        )
+
+                        // Function 5 - Supplier Management
+                        .requestMatchers("/supplier/**")
+                        .hasRole("ADMIN")
+
+                        // Function 6 - Reporting / Audit
+                        .requestMatchers("/reporting/**")
+                        .hasRole("ADMIN")
+
+                        // Any other page requires authentication
+                        .anyRequest()
+                        .authenticated()
                 )
+
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
                         .defaultSuccessUrl("/dashboard", true)
                         .permitAll()
                 )
+
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()
                 );
+
         return http.build();
     }
 }
