@@ -61,7 +61,7 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // Product administration is narrower than general inventory access.
-                        // Keep these rules before /inventory/** because matcher order matters.
+                        //Update inventory product details.
                         .requestMatchers(HttpMethod.GET,
                                 "/inventory/products/new",
                                 "/inventory/products/*/edit")
