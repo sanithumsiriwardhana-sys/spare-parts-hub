@@ -302,7 +302,9 @@ public class InventoryController {
         }
     }
 
-    @GetMapping(value = "/locations/{id}/qr", produces = MediaType.IMAGE_PNG_VALUE)
+
+
+@GetMapping(value = "/locations/{id}/qr", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> locationQr(@PathVariable Integer id) {
         StorageLocation location = service.getLocation(id);
         byte[] png = qrCodeService.png(location.getLocationCode(), 320);
