@@ -12,6 +12,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Security configuration for internal staff users.
+ *
+ * Supplier portal authentication is intentionally handled separately by
+ * reporting.security.SupplierSecurityConfig.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -40,13 +46,18 @@ public class SecurityConfig {
         return provider;
     }
 
+    /**
+     * Internal staff security chain.
+     *
+     * SupplierSecurityConfig uses @Order(1) for /supplier-portal/**.
+     * This chain therefore uses @Order(2).
+     */
     @Bean
     @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
                 .authenticationProvider(authenticationProvider())
-                .addFilterAfter(activeStaffFilter, UsernamePasswordAuthenticationFilter.class)
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -59,21 +70,6 @@ public class SecurityConfig {
                                 "/images/**",
                                 "/webjars/**"
                         ).permitAll()
-
-                        // Product administration is narrower than general inventory access.
-                        //Update inventory product details.
-                        .requestMatchers(HttpMethod.GET,
-                                "/inventory/products/new",
-                                "/inventory/products/*/edit")
-                        .hasAnyRole("WAREHOUSE_CLERK", "ADMIN")
-                        .requestMatchers(HttpMethod.POST,
-                                "/inventory/products",
-                                "/inventory/products/*",
-                                "/inventory/products/*/reorder-level")
-                        .hasAnyRole("WAREHOUSE_CLERK", "ADMIN")
-
-                        .requestMatchers(HttpMethod.POST, "/inventory/locations/*/delete")
-                        .hasAnyRole("WAREHOUSE_CLERK", "ADMIN")
 
                         // Function 1 - Inventory Storage Location Tracking
                         .requestMatchers("/inventory/**")
@@ -90,6 +86,11 @@ public class SecurityConfig {
                                 "ADMIN"
                         )
 
+                        /*
+                         * More specific stock-request rule must come before
+                         * /stockmonitoring/** because Spring Security evaluates
+                         * requestMatchers from top to bottom.
+                         */
                         .requestMatchers("/stockmonitoring/stock-requests/**")
                         .hasAnyRole(
                                 "SALES_EXEC",
