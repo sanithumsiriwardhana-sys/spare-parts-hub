@@ -271,6 +271,7 @@ public class InventoryService {
     }
 
     @Transactional
+
     public String deleteLocation(Integer locationId, User actor) {
         if (locationId == null || locationId <= 0) {
             throw new IllegalArgumentException("Storage location not found.");
