@@ -34,6 +34,7 @@ public interface InventoryProductRepository extends JpaRepository<Product, Integ
 
     boolean existsByProductCodeIgnoreCaseAndProductIdNot(String productCode, Integer productId);
 
+
     @Query("select distinct p.category from Product p order by p.category")
     List<String> findDistinctCategories();
 
