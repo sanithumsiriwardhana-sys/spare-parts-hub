@@ -27,6 +27,9 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 60)
     private String passwordHash;
 
+    @Column(name = "active", nullable = false)
+    private boolean active = true;
+
     public enum Role {
         warehouse_clerk,
         sales_exec,
@@ -36,10 +39,7 @@ public class User {
     }
 
     public User() {
-        // JPA requires a no-args constructor
     }
-
-    // Getters and setters
 
     public Integer getUserId() {
         return userId;
@@ -87,5 +87,13 @@ public class User {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }

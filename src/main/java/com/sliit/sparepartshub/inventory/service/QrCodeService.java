@@ -32,7 +32,6 @@ public class QrCodeService {
             throw new IllegalStateException("Could not generate QR code.", e);
         }
     }
-    
 
     public String decode(MultipartFile image) {
         if (image == null || image.isEmpty()) {

@@ -14,7 +14,7 @@ import java.time.LocalDate;
 public class SerialNumber {
 
     public enum CurrentStatus {
-        in_stock, sold, returned, defective
+        in_stock, sold, returned, defective, replacement
     }
 
     @Id

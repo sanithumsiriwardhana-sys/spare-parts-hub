@@ -3,6 +3,7 @@ package com.sliit.sparepartshub.inventory.repository;
 import com.sliit.sparepartshub.entity.PickTicket;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;

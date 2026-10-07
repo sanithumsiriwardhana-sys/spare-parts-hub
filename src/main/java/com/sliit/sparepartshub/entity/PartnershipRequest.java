@@ -1,6 +1,7 @@
 package com.sliit.sparepartshub.entity;
 
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 @Entity

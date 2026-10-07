@@ -13,7 +13,7 @@ public class Product {
     @Column(name = "product_id")
     private Integer productId;
 
-    @Column(name = "product_code", length = 20)
+    @Column(name = "product_code", nullable = false, unique = true, length = 20)
     private String productCode;
 
     // Nullable: a product can exist before it has been assigned a physical
@@ -37,6 +37,12 @@ public class Product {
     @Column(name = "stock_count", nullable = false)
     private Integer stockCount = 0;
 
+    // Configurable warehouse threshold used by Function 1 to identify low stock.
+    // Keeping this on Product avoids a hard-coded global threshold and lets each
+    // spare-part type have an appropriate reorder point.
+    @Column(name = "reorder_level", nullable = false)
+    private Integer reorderLevel = 5;
+
     // Computed by Function 3 (Dynamic Urgency Score Tracking) from stock
     // level vs. recent sales velocity - not meant to be hand-edited by users.
     @Column(name = "urgency_score", precision = 6, scale = 2)
@@ -44,6 +50,12 @@ public class Product {
 
     @Column(name = "warranty_period_months")
     private Integer warrantyPeriodMonths;
+
+    // Explicit product-level switch. Previously Function 1 inferred serial
+    // tracking from whether historical serial rows existed, which cannot
+    // represent a brand-new serial-tracked product before its first receipt.
+    @Column(name = "serial_tracked", nullable = false)
+    private boolean serialTracked = false;
 
     public Product() {
     }
@@ -112,6 +124,14 @@ public class Product {
         this.stockCount = stockCount;
     }
 
+    public Integer getReorderLevel() {
+        return reorderLevel;
+    }
+
+    public void setReorderLevel(Integer reorderLevel) {
+        this.reorderLevel = reorderLevel;
+    }
+
     public BigDecimal getUrgencyScore() {
         return urgencyScore;
     }
@@ -126,5 +146,13 @@ public class Product {
 
     public void setWarrantyPeriodMonths(Integer warrantyPeriodMonths) {
         this.warrantyPeriodMonths = warrantyPeriodMonths;
+    }
+
+    public boolean isSerialTracked() {
+        return serialTracked;
+    }
+
+    public void setSerialTracked(boolean serialTracked) {
+        this.serialTracked = serialTracked;
     }
 }

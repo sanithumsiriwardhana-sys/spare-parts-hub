@@ -1,23 +1,8 @@
 package com.sliit.sparepartshub.inventory.service;
 
-import com.sliit.sparepartshub.entity.AuditLog;
-import com.sliit.sparepartshub.entity.PickTicket;
-import com.sliit.sparepartshub.entity.PickTicketItem;
-import com.sliit.sparepartshub.entity.Product;
-import com.sliit.sparepartshub.entity.SerialNumber;
-import com.sliit.sparepartshub.entity.StorageLocation;
-import com.sliit.sparepartshub.entity.User;
-import com.sliit.sparepartshub.inventory.dto.CreateProductForm;
-import com.sliit.sparepartshub.inventory.dto.EditProductForm;
-import com.sliit.sparepartshub.inventory.dto.InventoryProductRow;
-import com.sliit.sparepartshub.inventory.dto.LocationForm;
-import com.sliit.sparepartshub.inventory.dto.PickTicketLineView;
-import com.sliit.sparepartshub.inventory.repository.InventoryAuditLogRepository;
-import com.sliit.sparepartshub.inventory.repository.InventoryPickTicketItemRepository;
-import com.sliit.sparepartshub.inventory.repository.InventoryPickTicketRepository;
-import com.sliit.sparepartshub.inventory.repository.InventoryProductRepository;
-import com.sliit.sparepartshub.inventory.repository.InventorySerialNumberRepository;
-import com.sliit.sparepartshub.inventory.repository.InventoryStorageLocationRepository;
+import com.sliit.sparepartshub.entity.*;
+import com.sliit.sparepartshub.inventory.dto.*;
+import com.sliit.sparepartshub.inventory.repository.*;
 import com.sliit.sparepartshub.stockmonitoring.service.StockMonitoringService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -26,13 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class InventoryService {
@@ -271,7 +250,6 @@ public class InventoryService {
     }
 
     @Transactional
-
     public String deleteLocation(Integer locationId, User actor) {
         if (locationId == null || locationId <= 0) {
             throw new IllegalArgumentException("Storage location not found.");

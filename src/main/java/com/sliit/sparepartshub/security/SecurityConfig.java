@@ -58,6 +58,7 @@ public class SecurityConfig {
 
         http
                 .authenticationProvider(authenticationProvider())
+                .addFilterAfter(activeStaffFilter, UsernamePasswordAuthenticationFilter.class)
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -70,6 +71,21 @@ public class SecurityConfig {
                                 "/images/**",
                                 "/webjars/**"
                         ).permitAll()
+
+                        // Product administration is narrower than general inventory access.
+                        // Keep these rules before /inventory/** because matcher order matters.
+                        .requestMatchers(HttpMethod.GET,
+                                "/inventory/products/new",
+                                "/inventory/products/*/edit")
+                        .hasAnyRole("WAREHOUSE_CLERK", "ADMIN")
+                        .requestMatchers(HttpMethod.POST,
+                                "/inventory/products",
+                                "/inventory/products/*",
+                                "/inventory/products/*/reorder-level")
+                        .hasAnyRole("WAREHOUSE_CLERK", "ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/inventory/locations/*/delete")
+                        .hasAnyRole("WAREHOUSE_CLERK", "ADMIN")
 
                         // Function 1 - Inventory Storage Location Tracking
                         .requestMatchers("/inventory/**")

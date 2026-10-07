@@ -2,6 +2,7 @@ package com.sliit.sparepartshub.inventory.dto;
 
 import com.sliit.sparepartshub.entity.PickTicketItem;
 import com.sliit.sparepartshub.entity.SerialNumber;
+
 import java.util.List;
 
 public class PickTicketLineView {

@@ -18,8 +18,14 @@ public class SupplierUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Supplier supplier = supplierRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("No supplier account found for email: " + email));
+        if (email == null || email.isBlank()) {
+            throw new UsernameNotFoundException("Supplier email is required.");
+        }
+
+        Supplier supplier = supplierRepository.findByEmailIgnoreCase(email.trim())
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "No supplier account found for the supplied email address."));
+
         return new CustomSupplierPrincipal(supplier);
     }
 }

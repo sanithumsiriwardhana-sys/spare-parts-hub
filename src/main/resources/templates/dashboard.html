@@ -1,86 +1,153 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{fragments/layout :: page(title='Dashboard', content=~{::main})}">
 <body>
-<main>
-    <h2>Welcome, <span sec:authentication="name"></span></h2>
-
-    <!-- Each function's widget goes in its own gated block below - only
-         show it to the roles who'd actually act on it, same pattern as
-         the navbar. Add yours as a new div, don't edit this one. -->
-    <div class="row g-3 mt-2" sec:authorize="hasAnyRole('INVENTORY_SUPERVISOR','ADMIN')">
-
-        <div class="col-md-3">
-            <div class="card h-100" th:classappend="${criticalCount > 0} ? 'border-danger' : ''">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Urgency Dashboard</h6>
-                    <p class="display-6 mb-1" th:text="${criticalCount}">0</p>
-                    <p class="text-muted small mb-2">item(s) at CRITICAL urgency</p>
-                    <a th:href="@{/stockmonitoring}" class="btn btn-sm btn-outline-primary">View dashboard</a>
+<main class="page-wrap module-dashboard">
+    <section class="dashboard-hero ambient-surface" aria-labelledby="dashboard-title">
+        <div class="dashboard-hero-copy">
+            <div class="eyebrow">Spare Parts Hub • Integrated Workspace</div>
+            <h1 id="dashboard-title" class="page-title">
+                Welcome, <span sec:authentication="principal.user.name">Staff Member</span>
+            </h1>
+            <p class="page-subtitle">
+                One connected workspace for inventory, sales, restocking, warranty, suppliers and reporting.
+            </p>
+            <div class="typewriter-line" aria-live="polite">
+                <span class="typewriter-label">Workspace:</span>
+                <span class="typewriter-text"
+                      data-typewriter
+                      data-typewriter-phrases="Manage inventory intelligently|Track suppliers smoothly|Monitor stock continuously|Keep operations connected">Manage inventory intelligently</span>
+                <span class="typewriter-cursor" aria-hidden="true"></span>
+            </div>
+        </div>
+        <div class="dashboard-hero-aside" aria-label="Live workspace overview">
+            <div class="hero-motion-stage kpi-orbit-dashboard" data-kpi-orbit>
+                <span class="floating-stat floating-stat-a">
+                    <strong class="kpi-orbit__value" th:text="${pendingPicks}">0</strong>
+                    Pending Picks
+                </span>
+                <span class="floating-stat floating-stat-b">
+                    <strong class="kpi-orbit__value" th:text="${openPos}">0</strong>
+                    Open POs
+                </span>
+                <span class="floating-stat floating-stat-c">
+                    <strong class="kpi-orbit__value" th:text="${pendingRmas}">0</strong>
+                    Pending RMA
+                </span>
+                <span class="floating-stat floating-stat-d">
+                    <strong class="kpi-orbit__value" th:text="${pendingStockRequests}">0</strong>
+                    Stock Requests
+                </span>
+                <div class="hero-orbit" aria-hidden="true">
+                    <span class="hero-orbit-dot"></span>
+                    <span class="hero-orbit-core">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                            <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/>
+                            <path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>
+                        </svg>
+                    </span>
+                </div>
+                <div class="system-status">
+                    <span class="system-status-dot" aria-hidden="true"></span>
+                    <span>
+                        <strong>Workspace live</strong>
+                        <span>Shared operational data connected</span>
+                    </span>
                 </div>
             </div>
         </div>
+    </section>
 
-        <div class="col-md-3">
-            <div class="card h-100" th:classappend="${warningCount > 0} ? 'border-warning' : ''">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Warning Items</h6>
-                    <p class="display-6 mb-1" th:text="${warningCount}">0</p>
-                    <p class="text-muted small mb-2">approaching critical urgency</p>
-                    <a th:href="@{/stockmonitoring}" class="btn btn-sm btn-outline-secondary">View dashboard</a>
-                </div>
+    <section class="content-section">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Your Workspaces</h2>
+                <p class="section-subtitle">Open the module you need. Access follows your staff role.</p>
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Restock Suggestions</h6>
-                    <p class="display-6 mb-1" th:text="${pendingRestockCount}">0</p>
-                    <p class="text-muted small mb-2">awaiting your decision</p>
-                    <a th:href="@{/stockmonitoring/restock-suggestions}" class="btn btn-sm btn-outline-secondary">Review</a>
+        <div class="workspace-grid">
+            <a class="action-card app-card module-card-sales"
+               sec:authorize="hasAnyRole('SALES_EXEC','ADMIN')"
+               th:href="@{/sales}">
+                <div class="module-card-head">
+                    <span class="module-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2l2.4 10.2a2 2 0 0 0 2 1.5h7.8a2 2 0 0 0 1.9-1.4L21 8H7"/></svg>
+                    </span>
+                    <span class="action-arrow">→</span>
                 </div>
-            </div>
-        </div>
+                <h3 class="module-card-title mb-2">Sales / POS</h3>
+                <p class="module-card-copy">Search live products, validate compatibility and complete checkout.</p>
+            </a>
 
-        <div class="col-md-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Stock Requests</h6>
-                    <p class="display-6 mb-1" th:text="${pendingStockRequestCount}">0</p>
-                    <p class="text-muted small mb-2">customers waiting to be notified</p>
-                    <a th:href="@{/stockmonitoring/stock-requests}" class="btn btn-sm btn-outline-secondary">View</a>
+            <a class="action-card app-card module-card-inventory"
+               sec:authorize="hasAnyRole('WAREHOUSE_CLERK','SALES_EXEC','ADMIN')"
+               th:href="@{/inventory}">
+                <div class="module-card-head">
+                    <span class="module-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>
+                    </span>
+                    <span class="action-arrow">→</span>
                 </div>
-            </div>
-        </div>
+                <h3 class="module-card-title mb-2">Inventory & Picking</h3>
+                <p class="module-card-copy">Locate stock and process warehouse pick tickets accurately.</p>
+            </a>
 
-        <div class="col-12 mt-1">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Stock by Category</h6>
-                    <div th:if="${#lists.isEmpty(categoryStockSummaries)}" class="text-muted small">
-                        No products found.
-                    </div>
-                    <table th:unless="${#lists.isEmpty(categoryStockSummaries)}" class="table table-sm mb-0">
-                        <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Total Stock</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="row : ${categoryStockSummaries}">
-                            <td th:text="${row.category}">Category</td>
-                            <td th:text="${row.totalStock}">0</td>
-                        </tr>
-                        </tbody>
-                    </table>
+            <a class="action-card app-card module-card-urgency"
+               sec:authorize="hasAnyRole('INVENTORY_SUPERVISOR','ADMIN')"
+               th:href="@{/stockmonitoring}">
+                <div class="module-card-head">
+                    <span class="module-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 14 4-4"/><path d="M6.5 15H4.5M19.5 15h-2M12 8V6"/></svg>
+                    </span>
+                    <span class="action-arrow">→</span>
                 </div>
-            </div>
-        </div>
+                <h3 class="module-card-title mb-2">Urgency & Restocking</h3>
+                <p class="module-card-copy">Prioritize stock risk and review replenishment suggestions.</p>
+            </a>
 
-    </div>
+            <a class="action-card app-card module-card-warranty"
+               sec:authorize="hasAnyRole('OPERATIONS_COORDINATOR','ADMIN')"
+               th:href="@{/warranty}">
+                <div class="module-card-head">
+                    <span class="module-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 19 6v5c0 4.6-2.9 8.1-7 10-4.1-1.9-7-5.4-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                    </span>
+                    <span class="action-arrow">→</span>
+                </div>
+                <h3 class="module-card-title mb-2">Warranty / RMA</h3>
+                <p class="module-card-copy">Verify serials, coverage and return resolutions with confidence.</p>
+            </a>
+
+            <a class="action-card app-card module-card-supplier"
+               sec:authorize="hasRole('ADMIN')"
+               th:href="@{/supplier}">
+                <div class="module-card-head">
+                    <span class="module-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20a5.5 5.5 0 0 1 11 0M13 20a4.5 4.5 0 0 1 9 0"/></svg>
+                    </span>
+                    <span class="action-arrow">→</span>
+                </div>
+                <h3 class="module-card-title mb-2">Supplier Management</h3>
+                <p class="module-card-copy">Compare suppliers, issue purchase orders and receive stock.</p>
+            </a>
+
+            <a class="action-card app-card module-card-reporting"
+               sec:authorize="hasRole('ADMIN')"
+               th:href="@{/reporting}">
+                <div class="module-card-head">
+                    <span class="module-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20V7"/></svg>
+                    </span>
+                    <span class="action-arrow">→</span>
+                </div>
+                <h3 class="module-card-title mb-2">Reports & Audit</h3>
+                <p class="module-card-copy">Review sales performance, operational risks and audit evidence.</p>
+            </a>
+        </div>
+    </section>
 </main>
 </body>
 </html>
