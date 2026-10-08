@@ -4,6 +4,7 @@ import com.sliit.sparepartshub.entity.Product;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +34,6 @@ public interface InventoryProductRepository extends JpaRepository<Product, Integ
     boolean existsByProductCodeIgnoreCase(String productCode);
 
     boolean existsByProductCodeIgnoreCaseAndProductIdNot(String productCode, Integer productId);
-
 
     @Query("select distinct p.category from Product p order by p.category")
     List<String> findDistinctCategories();
