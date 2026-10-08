@@ -287,7 +287,7 @@ public class InventoryService {
             locations.delete(location);
             locations.flush();
         } catch (DataIntegrityViolationException ex) {
-            // Throw out of the transactional boundary: never commit after a failed flush.
+           
             throw new IllegalArgumentException("Storage location cannot be deleted because it is currently assigned to a product.", ex);
         }
         audit(actor, "LOCATION_DELETED", "storage_location", locationId, oldValue, null);
@@ -343,13 +343,6 @@ public class InventoryService {
         stockMonitoring.recalculateProduct(product.getProductId());
     }
 
-    /**
-     * Sales checkout is the source of truth for the stock deduction: it deducts
-     * the requested quantity when the Sale/PickTicket transaction commits.
-     * Warehouse picking MUST NOT deduct it again. If the warehouse can only
-     * fulfill part of a ticket, the unpicked shortfall is returned to stock so
-     * the net reduction equals the quantity physically fulfilled.
-     */
     @Transactional
     public void completeTicket(Integer ticketId,
                                Map<Integer, Integer> pickedByItem,
