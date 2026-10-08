@@ -1,51 +1,11 @@
 package com.sliit.sparepartshub.web;
 
-import com.sliit.sparepartshub.entity.User;
-import com.sliit.sparepartshub.sales.service.SalesDashboardService;
-import com.sliit.sparepartshub.security.CustomUserPrincipal;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.sliit.sparepartshub.inventory.service.InventoryService;
+import com.sliit.sparepartshub.reporting.service.ReportingService;
+import com.sliit.sparepartshub.stockmonitoring.service.StockMonitoringService;
+import com.sliit.sparepartshub.supplier.service.SupplierManagementService;
+import com.sliit.sparepartshub.warranty.service.WarrantyService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-
-@Controller
-public class PageController {
-
-    private final SalesDashboardService salesDashboardService;
-
-    public PageController(SalesDashboardService salesDashboardService) {
-        this.salesDashboardService = salesDashboardService;
-    }
-
-    @GetMapping("/")
-    public String root() {
-        return "redirect:/dashboard";
-    }
-
-    @GetMapping("/login")
-    public String login() {
-        return "login";
-    }
-
-    // Placeholder landing page after login. Each member's module can add
-    // its own dashboard widget/link here later - keep this controller as
-    // the one shared entry point rather than duplicating "/dashboard"
-    // mappings elsewhere.
-    //
-    // Function 2's block: only computed for roles that'll actually see
-    // it (dashboard.html gates the widget itself to SALES_EXEC/ADMIN via
-    // sec:authorize) - no reason to run the sales aggregation queries on
-    // every dashboard load for a Warehouse Clerk who'll never see the
-    // result.
-    @GetMapping("/dashboard")
-    public String dashboard(Model model, @AuthenticationPrincipal CustomUserPrincipal principal) {
-        if (principal != null && hasSalesDashboardAccess(principal.getUser())) {
-            model.addAttribute("salesStats", salesDashboardService.getStats());
-        }
-        return "dashboard";
-    }
-
-    private boolean hasSalesDashboardAccess(User user) {
-        return user.getRole() == User.Role.sales_exec || user.getRole() == User.Role.admin;
-    }
-}
+@Controller public class PageController{private final InventoryService inventory;private final StockMonitoringService monitoring;private final SupplierManagementService supplier;private final WarrantyService warranty;private final ReportingService reporting;public PageController(InventoryService i,StockMonitoringService m,SupplierManagementService s,WarrantyService w,ReportingService r){inventory=i;monitoring=m;supplier=s;warranty=w;reporting=r;}@GetMapping("/")public String root(){return "redirect:/dashboard";}@GetMapping("/login")public String login(){return "login";}@GetMapping("/dashboard")public String dashboard(Model m){m.addAttribute("pendingPicks",inventory.pendingCount());m.addAttribute("pendingStockRequests",monitoring.pendingRequestCount());m.addAttribute("openPos",supplier.getPurchaseOrders().stream().filter(x->x.getStatus()!=com.sliit.sparepartshub.entity.PurchaseOrder.Status.received).count());m.addAttribute("pendingRmas",warranty.pendingCount());m.addAttribute("reportSummary",reporting.summary());return "dashboard";}}
