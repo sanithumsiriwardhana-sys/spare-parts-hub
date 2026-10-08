@@ -1,0 +1,146 @@
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Pick Ticket', content=~{::main})}">
+<body>
+<main>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;600&display=swap');
+
+    .wo-wrap{ --ink:#1B2430; --muted:#5B6572; --line:#D8DEE5;
+      --blue:#2455A4; --blue-tint:#E7EEF9;
+      --amber:#B8790A; --amber-tint:#FBF0DE;
+      --green:#2F7D5A; --green-tint:#E4F3EC;
+      --red:#B4432D; --red-tint:#FBEAE6;
+      font-family: -apple-system, "Segoe UI", sans-serif; color:var(--ink);
+      max-width:900px; }
+    .wo-wrap .disp{ font-family:'Space Grotesk', sans-serif; }
+    .wo-wrap .mono{ font-family:'JetBrains Mono', monospace; }
+
+    .wo-flash{ border-radius:3px; padding:.6rem .9rem; font-size:.9rem; margin-bottom:1.25rem; }
+    .wo-flash.ok{ background:var(--green-tint); color:#215C40; border:1px solid #BFE1CF; }
+    .wo-flash.err{ background:var(--red-tint); color:#7C2A18; border:1px solid #F0C4B9; }
+
+    .wo-head{ display:flex; align-items:center; justify-content:space-between;
+      flex-wrap:wrap; gap:.6rem; margin-bottom:.3rem; }
+    .wo-head h1{ font-family:'Space Grotesk', sans-serif; font-weight:700;
+      font-size:1.7rem; margin:0; }
+    .wo-head .mono{ color:var(--muted); }
+    .wo-chip{ font-family:'JetBrains Mono', monospace; font-size:.75rem;
+      letter-spacing:.03em; padding:.25rem .65rem; border-radius:3px;
+      text-transform:uppercase; }
+    .wo-chip.pending{ background:var(--amber-tint); color:var(--amber); }
+    .wo-chip.completed{ background:var(--green-tint); color:var(--green); }
+    .wo-chip.partially_completed{ background:var(--blue-tint); color:var(--blue); }
+    .wo-chip.exception{ background:var(--red-tint); color:var(--red); }
+
+    .wo-sub{ color:var(--muted); font-size:.95rem; margin-bottom:1.75rem; }
+    .wo-sub strong{ color:var(--ink); }
+
+    .wo-grid{ display:grid; grid-template-columns: 200px 1fr; gap:1.4rem; margin-bottom:1.6rem; }
+    @media (max-width: 700px){ .wo-grid{ grid-template-columns: 1fr; } }
+
+    .wo-qr{ border:1px solid var(--line); border-radius:3px; padding:1rem;
+      display:flex; flex-direction:column; align-items:center; gap:.6rem; }
+    .wo-qr img{ width:150px; height:150px; }
+    .wo-qr span{ font-size:.72rem; color:var(--muted); text-align:center; letter-spacing:.02em; }
+
+    .wo-loc-missing{ border:1px dashed var(--amber); background:var(--amber-tint);
+      border-radius:3px; padding:1.1rem 1.3rem; color:#7A4E06; }
+    .wo-loc-missing strong{ display:block; font-family:'Space Grotesk', sans-serif;
+      margin-bottom:.25rem; color:var(--ink); }
+    .wo-loc-missing a{ color:var(--blue); font-weight:600; }
+
+    .wo-coords{ display:flex; gap:.75rem; }
+    .wo-coord{ flex:1; border:1px solid var(--line); border-radius:3px;
+      padding:.8rem 1rem; text-align:center; }
+    .wo-coord .lbl{ font-size:.68rem; letter-spacing:.08em; color:var(--muted); margin-bottom:.3rem; }
+    .wo-coord .val{ font-family:'JetBrains Mono', monospace; font-weight:600; font-size:1.3rem; }
+    .wo-locode{ margin-top:.7rem; font-size:.85rem; color:var(--muted); }
+    .wo-locode code{ font-family:'JetBrains Mono', monospace; color:var(--ink); }
+
+    .wo-panel{ border:1px solid var(--line); border-radius:3px; padding:1.3rem 1.4rem; max-width:460px; }
+    .wo-panel h2{ font-family:'Space Grotesk', sans-serif; font-size:1.05rem;
+      font-weight:700; margin:0 0 .3rem; }
+    .wo-panel .hint{ color:var(--muted); font-size:.85rem; margin-bottom:1rem; }
+    .wo-field{ margin-bottom:1rem; }
+    .wo-field label{ display:block; font-size:.8rem; font-weight:600; margin-bottom:.3rem; }
+    .wo-field input, .wo-field textarea{ width:100%; border:1.5px solid var(--line);
+      border-radius:3px; padding:.55rem .7rem; font-size:.95rem; font-family:'JetBrains Mono', monospace; }
+    .wo-field textarea{ font-family:inherit; resize:vertical; }
+    .wo-field input:focus, .wo-field textarea:focus{ outline:none; border-color:var(--blue); }
+    .wo-actions{ display:flex; align-items:center; gap:1rem; }
+    .wo-submit{ background:var(--ink); color:#fff; border:none; border-radius:3px;
+      padding:.6rem 1.3rem; font-family:'Space Grotesk', sans-serif; font-weight:600;
+      font-size:.9rem; cursor:pointer; }
+    .wo-submit:hover{ background:var(--blue); }
+    .wo-back{ color:var(--muted); font-size:.85rem; text-decoration:none; }
+    .wo-back:hover{ text-decoration:underline; }
+  </style>
+
+  <div class="wo-wrap">
+
+    <div th:if="${message}" class="wo-flash ok" th:text="${message}"></div>
+    <div th:if="${error}" class="wo-flash err" th:text="${error}"></div>
+
+    <div class="wo-head">
+      <h1>Work order <span class="mono" th:text="${ticket.ticketCode}">PT-0001</span></h1>
+      <span class="wo-chip" th:classappend="${ticket.status}" th:text="${ticket.status}">pending</span>
+    </div>
+    <p class="wo-sub">
+      <strong th:text="${ticket.productName}">Product</strong> &middot;
+      qty requested <strong th:text="${ticket.requestedQuantity}">1</strong>
+    </p>
+
+    <div class="wo-grid">
+      <div class="wo-qr">
+        <img th:src="@{/inventory/pick-tickets/{code}/qr(code=${ticket.ticketCode})}" alt="Pick ticket QR code" />
+        <span>Scan at the shelf to reopen this ticket</span>
+      </div>
+
+      <div class="wo-loc-missing" th:if="${ticket.locationMissing}">
+        <strong>No bin mapped yet</strong>
+        This product doesn't have a storage location on file.
+        <a th:href="@{/inventory/locations}">Assign one</a> before picking &mdash; the system can't tell you where to look.
+      </div>
+
+      <div th:unless="${ticket.locationMissing}">
+        <div class="wo-coords">
+          <div class="wo-coord">
+            <div class="lbl">AISLE</div>
+            <div class="val" th:text="${ticket.aisle}">A1</div>
+          </div>
+          <div class="wo-coord">
+            <div class="lbl">SHELF</div>
+            <div class="val" th:text="${ticket.shelf}">S1</div>
+          </div>
+          <div class="wo-coord">
+            <div class="lbl">BIN</div>
+            <div class="val" th:text="${ticket.bin}">B1</div>
+          </div>
+        </div>
+        <div class="wo-locode">Location code <code th:text="${ticket.locationCode}">A1-S1-B1</code></div>
+      </div>
+    </div>
+
+    <div class="wo-panel">
+      <h2>Confirm pick</h2>
+      <p class="hint">Enter less than the requested quantity for a partial pick, or 0 if the item couldn't be found.</p>
+      <form th:action="@{/inventory/pick-tickets/{id}/confirm(id=${ticket.ticketId})}" method="post">
+        <div class="wo-field">
+          <label>Picked quantity</label>
+          <input type="number" name="pickedQuantity" min="0" th:max="${ticket.requestedQuantity}" required />
+        </div>
+        <div class="wo-field">
+          <label>Exception / discrepancy notes (optional)</label>
+          <textarea name="exceptionReason" rows="2" placeholder="e.g. item damaged, only 3 of 5 found"></textarea>
+        </div>
+        <div class="wo-actions">
+          <button type="submit" class="wo-submit">Confirm pick</button>
+          <a th:href="@{/inventory/pick-tickets}" class="wo-back">Back to queue</a>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

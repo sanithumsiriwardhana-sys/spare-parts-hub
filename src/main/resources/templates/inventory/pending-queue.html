@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(title='Pick ticket activities', content=~{::main})}">
+
+<body>
+<main>
+
+    <style>
+
+        /* =========================
+           PAGE
+        ========================= */
+
+        .pick-page {
+            --navy: #10233f;
+            --blue: #1769e0;
+            --ink: #172033;
+            --muted: #667085;
+            --line: #dfe7f0;
+
+            background: #f7f9fc;
+            color: var(--ink);
+
+            min-height: calc(100vh - 70px);
+            padding: 28px 3vw 60px;
+        }
+
+        .pick-page * {
+            box-sizing: border-box;
+        }
+
+
+        /* =========================
+           HERO
+        ========================= */
+
+        .pick-hero {
+            background: linear-gradient(120deg, #10233f, #1d5aa0);
+            border-radius: 18px;
+            color: #fff;
+            padding: 26px 30px;
+            margin-bottom: 14px;
+        }
+
+        .kicker {
+            color: #add0ff;
+            font-size: .68rem;
+            font-weight: 850;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+
+        .pick-hero h1 {
+            font-size: clamp(1.7rem, 3vw, 2.3rem);
+            font-weight: 850;
+            letter-spacing: -.04em;
+            margin: 7px 0;
+        }
+
+        .pick-hero p {
+            color: #dbeafe;
+            font-size: .84rem;
+            margin: 0;
+            max-width: 650px;
+        }
+
+
+        /* =========================
+           QUICK TABS
+        ========================= */
+
+        .quick-tabs {
+            background: #eef3f8;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            display: flex;
+            gap: 4px;
+            margin-bottom: 14px;
+            overflow: auto;
+            padding: 4px;
+        }
+
+        .quick-tabs a {
+            border-radius: 7px;
+            color: #536b82;
+            font-size: .72rem;
+            font-weight: 800;
+            padding: 8px 12px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .quick-tabs a:hover,
+        .quick-tabs a.active {
+            background: #dbeafe;
+            color: var(--blue);
+        }
+
+
+        /* =========================
+           FLASH MESSAGES
+        ========================= */
+
+        .flash {
+            border: 1px solid;
+            border-radius: 9px;
+            font-size: .82rem;
+            margin-bottom: 12px;
+            padding: 10px 13px;
+        }
+
+        .flash.ok {
+            background: #edfaf4;
+            border-color: #bcebd3;
+            color: #14633f;
+        }
+
+        .flash.err {
+            background: #fff2f0;
+            border-color: #f3c8c3;
+            color: #96362f;
+        }
+
+
+        /* =========================
+           METRICS
+        ========================= */
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .metric {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(16, 35, 63, .04);
+            padding: 15px;
+            position: relative;
+        }
+
+        .metric:before {
+            background: var(--accent);
+            content: "";
+            height: 58%;
+            left: 0;
+            position: absolute;
+            top: 21%;
+            width: 3px;
+        }
+
+        .metric-label {
+            color: #536b82;
+            font-size: .63rem;
+            font-weight: 850;
+            letter-spacing: .08em;
+        }
+
+        .metric-value {
+            font-size: 1.45rem;
+            font-weight: 850;
+            line-height: 1.2;
+            margin-top: 7px;
+        }
+
+        .metric-copy {
+            color: var(--muted);
+            font-size: .68rem;
+            margin-top: 3px;
+        }
+
+
+        /* =========================
+           MAIN CONTENT
+        ========================= */
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .panel {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 3px 10px rgba(16, 35, 63, .04);
+            padding: 18px;
+        }
+
+        .panel-head {
+            align-items: flex-start;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .panel h2 {
+            font-size: 1rem;
+            font-weight: 850;
+            margin: 0;
+        }
+
+        .panel-sub {
+            color: var(--muted);
+            font-size: .72rem;
+            margin: 4px 0 0;
+        }
+
+
+        /* =========================
+           SCAN FORM
+        ========================= */
+
+        .scan-form {
+            display: flex;
+            gap: 7px;
+            margin-bottom: 14px;
+        }
+
+        .scan-form input {
+            border: 1px solid #d5dfeb;
+            border-radius: 8px;
+            flex: 1;
+            font-family: monospace;
+            font-size: .8rem;
+            padding: 9px 10px;
+        }
+
+        .btn-blue,
+        .btn-dark {
+            border: 0;
+            border-radius: 8px;
+            color: #fff;
+            font-size: .75rem;
+            font-weight: 800;
+            padding: 9px 13px;
+        }
+
+        .btn-blue {
+            background: var(--blue);
+        }
+
+        .btn-dark {
+            background: var(--navy);
+        }
+
+
+        /* =========================
+           TICKET LIST
+        ========================= */
+
+        .ticket-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ticket {
+            align-items: center;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            padding: 11px;
+        }
+
+        .ticket-code {
+            background: #eaf2ff;
+            border-radius: 7px;
+            color: #1154b4;
+            font-family: monospace;
+            font-size: .72rem;
+            font-weight: 800;
+            padding: 7px;
+        }
+
+        .ticket-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ticket-info strong {
+            display: block;
+            font-size: .79rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-info span {
+            color: var(--muted);
+            display: block;
+            font-size: .68rem;
+            margin-top: 3px;
+        }
+
+        .ticket-actions {
+            align-items: center;
+            display: flex;
+            gap: 7px;
+        }
+
+        .ticket-actions a {
+            color: var(--blue);
+            font-size: .72rem;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .ticket-actions form button {
+            background: #fff5f4;
+            border: 1px solid #f0c6c2;
+            border-radius: 7px;
+            color: #b23832;
+            font-size: .68rem;
+            padding: 6px 8px;
+        }
+
+        .empty {
+            border: 1px dashed #cbd7e4;
+            border-radius: 10px;
+            color: var(--muted);
+            font-size: .78rem;
+            padding: 25px;
+            text-align: center;
+        }
+
+
+        /* =========================
+           CREATE PICK TICKET
+        ========================= */
+
+        .create-form {
+            display: grid;
+            gap: 9px;
+        }
+
+        .field label {
+            color: #536b82;
+            display: block;
+            font-size: .68rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .field select,
+        .field input {
+            border: 1px solid #d5dfeb;
+            border-radius: 8px;
+            font-size: .78rem;
+            padding: 9px;
+            width: 100%;
+        }
+
+        .create-form button {
+            background: var(--blue);
+            border: 0;
+            border-radius: 8px;
+            color: #fff;
+            font-size: .76rem;
+            font-weight: 800;
+            padding: 10px;
+        }
+
+
+        /* =========================
+           WORKFLOW
+        ========================= */
+
+        .workflow {
+            margin-top: 14px;
+        }
+
+        .workflow-list {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .step {
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            padding: 11px;
+        }
+
+        .step-number {
+            align-items: center;
+            background: var(--blue);
+            border-radius: 50%;
+            color: #fff;
+            display: flex;
+            font-size: .62rem;
+            font-weight: 850;
+            height: 21px;
+            justify-content: center;
+            margin-bottom: 7px;
+            width: 21px;
+        }
+
+        .step strong {
+            display: block;
+            font-size: .72rem;
+        }
+
+        .step span {
+            color: var(--muted);
+            display: block;
+            font-size: .65rem;
+            line-height: 1.35;
+            margin-top: 3px;
+        }
+
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 850px) {
+
+            .metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 520px) {
+
+            .pick-page {
+                padding: 18px 14px 40px;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .ticket {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            .ticket-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .workflow-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+
+
+    <div class="pick-page">
+
+        <!-- =========================
+             HERO
+        ========================= -->
+
+        <section class="pick-hero">
+
+            <div class="kicker">
+                UC-01 / Warehouse fulfilment
+            </div>
+
+            <h1>
+                Pick ticket activities
+            </h1>
+
+            <p>
+                Create retrieval requests, scan ticket codes and confirm
+                what the warehouse clerk actually picked.
+            </p>
+
+        </section>
+
+
+        <!-- =========================
+             QUICK TABS
+        ========================= -->
+
+        <nav class="quick-tabs" aria-label="Inventory quick access">
+
+            <a th:href="@{/inventory}">
+                Overview
+            </a>
+
+            <a th:href="@{/inventory/locations}">
+                Storage map
+            </a>
+
+            <a class="active"
+               th:href="@{/inventory/pick-tickets}">
+                Pick tickets
+            </a>
+
+        </nav>
+
+
+        <!-- =========================
+             FLASH MESSAGES
+        ========================= -->
+
+        <div th:if="${message}"
+             class="flash ok"
+             th:text="${message}">
+        </div>
+
+        <div th:if="${error}"
+             class="flash err"
+             th:text="${error}">
+        </div>
+
+
+        <!-- =========================
+             METRICS
+        ========================= -->
+
+        <section class="metrics">
+
+            <article class="metric"
+                     style="--accent:#1769e0">
+
+                <div class="metric-label">
+                    PENDING TICKETS
+                </div>
+
+                <div class="metric-value"
+                     th:text="${#lists.size(queue)}">
+                    0
+                </div>
+
+                <div class="metric-copy">
+                    Waiting for a warehouse pick
+                </div>
+
+            </article>
+
+
+            <article class="metric"
+                     style="--accent:#24966b">
+
+                <div class="metric-label">
+                    PRODUCTS
+                </div>
+
+                <div class="metric-value"
+                     th:text="${#lists.size(products)}">
+                    0
+                </div>
+
+                <div class="metric-copy">
+                    Available for ticket creation
+                </div>
+
+            </article>
+
+
+            <article class="metric"
+                     style="--accent:#dc8a16">
+
+                <div class="metric-label">
+                    SALES
+                </div>
+
+                <div class="metric-value"
+                     th:text="${#lists.size(sales)}">
+                    0
+                </div>
+
+                <div class="metric-copy">
+                    Sales available to fulfil
+                </div>
+
+            </article>
+
+
+            <article class="metric"
+                     style="--accent:#7b58ba">
+
+                <div class="metric-label">
+                    WORKFLOW
+                </div>
+
+                <div class="metric-value">
+                    Active
+                </div>
+
+                <div class="metric-copy">
+                    Scan, locate, confirm
+                </div>
+
+            </article>
+
+        </section>
+
+
+        <!-- =========================
+             CREATE + PENDING
+             CREATE = LEFT
+             PENDING = RIGHT
+        ========================= -->
+
+        <div class="content-grid">
+
+
+            <!-- =========================
+                 CREATE PICK TICKET
+            ========================= -->
+
+            <section class="panel">
+
+                <div class="panel-head">
+
+                    <div>
+
+                        <h2>
+                            Create pick ticket
+                        </h2>
+
+                        <p class="panel-sub">
+                            Start a retrieval request for an existing sale.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <form th:action="@{/inventory/pick-tickets}"
+                      th:object="${newTicket}"
+                      method="post"
+                      class="create-form">
+
+
+                    <div class="field">
+
+                        <label for="productId">
+                            PRODUCT
+                        </label>
+
+                        <select id="productId"
+                                th:field="*{productId}"
+                                required>
+
+                            <option value="">
+                                Choose product
+                            </option>
+
+                            <option th:each="p : ${products}"
+                                    th:value="${p.productId}"
+                                    th:text="${p.productCode + ' - ' + p.name}">
+                                Product
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label for="saleId">
+                            SALE
+                        </label>
+
+                        <select id="saleId"
+                                th:field="*{saleId}"
+                                required>
+
+                            <option value="">
+                                Choose sale
+                            </option>
+
+                            <option th:each="sale : ${sales}"
+                                    th:value="${sale.saleId}"
+                                    th:text="${sale.saleCode != null ? sale.saleCode : 'Sale #' + sale.saleId}">
+                                Sale
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label for="quantity">
+                            QUANTITY
+                        </label>
+
+                        <input id="quantity"
+                               type="number"
+                               th:field="*{quantity}"
+                               min="1"
+                               required/>
+
+                    </div>
+
+
+                    <button type="submit">
+                        Create ticket
+                    </button>
+
+                </form>
+
+            </section>
+
+
+            <!-- =========================
+                 PENDING PICK QUEUE
+            ========================= -->
+
+            <section class="panel">
+
+                <div class="panel-head">
+
+                    <div>
+
+                        <h2>
+                            Pending pick queue
+                        </h2>
+
+                        <p class="panel-sub">
+                            Oldest requests appear first.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <form th:action="@{/inventory/pick-tickets/scan}"
+                      method="get"
+                      class="scan-form">
+
+                    <input type="text"
+                           name="ticketCode"
+                           placeholder="Scan or enter PT-XXXXXXXX"
+                           required/>
+
+                    <button class="btn-dark"
+                            type="submit">
+
+                        Open ticket
+
+                    </button>
+
+                </form>
+
+
+                <div class="ticket-list"
+                     th:if="${not #lists.isEmpty(queue)}">
+
+                    <article class="ticket"
+                             th:each="item : ${queue}">
+
+                        <span class="ticket-code"
+                              th:text="${item.ticketCode}">
+                            PT-0001
+                        </span>
+
+
+                        <div class="ticket-info">
+
+                            <strong th:text="${item.productName}">
+                                Product name
+                            </strong>
+
+                            <span th:text="${'Requested quantity: ' + item.requestedQuantity}">
+                                Requested quantity
+                            </span>
+
+                        </div>
+
+
+                        <div class="ticket-actions">
+
+                            <a th:href="@{/inventory/pick-tickets/scan(ticketCode=${item.ticketCode})}">
+                                Open
+                            </a>
+
+
+                            <form th:action="@{/inventory/pick-tickets/{id}/cancel(id=${item.ticketId})}"
+                                  method="post">
+
+                                <button type="submit">
+                                    Cancel
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </article>
+
+                </div>
+
+
+                <div class="empty"
+                     th:if="${#lists.isEmpty(queue)}">
+
+                    No pending pick tickets.
+                    New warehouse requests will appear here.
+
+                </div>
+
+            </section>
+
+        </div>
+
+
+        <!-- =========================
+             FULFILMENT WORKFLOW
+        ========================= -->
+
+        <section class="panel workflow">
+
+            <div class="panel-head">
+
+                <div>
+
+                    <h2>
+                        Fulfilment workflow
+                    </h2>
+
+                    <p class="panel-sub">
+                        A clear path from sale request to stock movement.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="workflow-list">
+
+
+                <div class="step">
+
+                    <div class="step-number">
+                        1
+                    </div>
+
+                    <strong>
+                        Create request
+                    </strong>
+
+                    <span>
+                        Link a product and sale to a ticket.
+                    </span>
+
+                </div>
+
+
+                <div class="step">
+
+                    <div class="step-number">
+                        2
+                    </div>
+
+                    <strong>
+                        Locate stock
+                    </strong>
+
+                    <span>
+                        Scan the ticket to see aisle, shelf and bin.
+                    </span>
+
+                </div>
+
+
+                <div class="step">
+
+                    <div class="step-number">
+                        3
+                    </div>
+
+                    <strong>
+                        Confirm pick
+                    </strong>
+
+                    <span>
+                        Record full, partial or exception quantity.
+                    </span>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+    </div>
+
+</main>
+</body>
+</html>
